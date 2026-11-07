@@ -159,6 +159,12 @@ h4{margin:16px 0 4px;border-bottom:1px solid var(--borde);padding-bottom:3px}
 .resp-item span{flex:1}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:9px 16px;border-radius:8px;z-index:30;max-width:90vw}
 #toast.err{background:#b00020}
+#progreso{position:fixed;top:0;left:0;right:0;height:4px;z-index:50;background:transparent;pointer-events:none}
+#progreso i{display:block;height:100%;width:0;background:#1e6fd9;transition:width .4s}
+#progreso.on i{animation:prog 1.6s ease-in-out infinite}
+@keyframes prog{0%{width:5%;margin-left:0}50%{width:55%;margin-left:20%}100%{width:5%;margin-left:95%}}
+#pasoTxt{display:none}
+button.ocupado{opacity:.6;cursor:wait}
 
 @media print{
   .noprint,.barra,.controles,.modal,#toast{display:none!important}
@@ -376,6 +382,7 @@ h4{margin:16px 0 4px;border-bottom:1px solid var(--borde);padding-bottom:3px}
   </div>
 </div>
 
+<div id="progreso"><i></i></div>
 <div id="toast" hidden></div>
 
 <script>
@@ -427,12 +434,38 @@ function rpc(token, accion, datos) {
     }
   });
 }
+/* Barra de progreso global + sincronización en segundo plano */
+var ocupados = 0, ESCRIBEN = ['guardarActividad','borrarActividad','guardarSemanal','borrarSemanal','guardarTipos','guardarPeriodos','guardarTodo','restaurar'];
+function progreso(on) {
+  ocupados += on ? 1 : -1; if (ocupados < 0) ocupados = 0;
+  var p = $('#progreso'); if (p) p.className = ocupados > 0 ? 'on' : '';
+}
+var syncCorriendo = false, syncPide = false;
+function pedirSync() {
+  if (syncCorriendo) { syncPide = true; return; }
+  syncCorriendo = true;
+  rpc(S.token, 'sincronizar', {}).catch(function () {}).then(function () {
+    syncCorriendo = false;
+    if (syncPide) { syncPide = false; pedirSync(); }
+  });
+}
 function llamar(accion, datos) {
+  var silencio = accion === 'version';
+  if (!silencio) progreso(true);
   return rpc(S.token, accion, datos).then(function (r) {
+    if (!silencio) progreso(false);
+    if (r && !r.error && ESCRIBEN.indexOf(accion) >= 0) pedirSync();
     if (r && r.error === 'SESION') { toast('Tu sesión expiró. Ingresa de nuevo.', true); salirLocal(); return null; }
     if (r && r.error) { S.ultimoError = r.mensaje || r.error; toast(S.ultimoError, true); return null; }
     return r && r.datos !== undefined ? r.datos : (r || {});
-  }, function (e) { S.ultimoError = 'Error: ' + (e && e.message ? e.message : e); toast(S.ultimoError, true); return null; });
+  }, function (e) { if (!silencio) progreso(false); S.ultimoError = 'Error: ' + (e && e.message ? e.message : e); toast(S.ultimoError, true); return null; });
+}
+/* Evita envíos repetidos: mientras un botón guarda, ignora más clics */
+async function unaVez(btn, txt, fn) {
+  if (btn.dataset.busy) return;
+  btn.dataset.busy = '1'; var t0 = btn.textContent; btn.disabled = true; btn.classList.add('ocupado'); btn.textContent = txt;
+  try { return await fn(); }
+  finally { delete btn.dataset.busy; btn.disabled = false; btn.classList.remove('ocupado'); btn.textContent = t0; }
 }
 
 /* ============ Sesión ============ */
@@ -595,8 +628,9 @@ function listaMes(y, m, desde, hasta) {
       (a.responsable ? ' <small>(' + esc(a.responsable) + ')</small>' : '') + '</li>';
   }).join('') + '</ul>';
 }
-function tablaMes(y, m) {
-  var items = actsEntre(new Date(y, m, 1), new Date(y, m + 1, 0));
+function tablaMes(y, m, desde, hasta) {
+  var ini = new Date(y, m, 1), fin = new Date(y, m + 1, 0);
+  var items = actsEntre(desde && desde > ini ? desde : ini, hasta && hasta < fin ? hasta : fin);
   var h = '<table class="tm"><thead><tr><th>Fecha</th><th>Actividad</th><th>Responsable</th></tr></thead><tbody>';
   if (!items.length) h += '<tr><td colspan="3" style="color:#999">Sin actividades</td></tr>';
   items.forEach(function (a) {
@@ -610,7 +644,7 @@ function tarjetasMeses(desde, hasta, limitar, modoTabla) {
   mesesEntre(desde, hasta).forEach(function (ym) {
     h += '<div class="mes"><div class="mes-t">' + MESES[ym[1]] + ' ' + ym[0] + '</div><div class="mes-c">' +
       miniMes(ym[0], ym[1], limitar ? desde : null, limitar ? hasta : null) +
-      (modoTabla ? tablaMes(ym[0], ym[1]) : listaMes(ym[0], ym[1], limitar ? desde : null, limitar ? hasta : null)) + '</div></div>';
+      (modoTabla ? tablaMes(ym[0], ym[1], limitar ? desde : null, limitar ? hasta : null) : listaMes(ym[0], ym[1], limitar ? desde : null, limitar ? hasta : null)) + '</div></div>';
   });
   return h + '</div>';
 }
@@ -634,7 +668,7 @@ function cronograma(desde, hasta) {
 function vistaPeriodo(desde, hasta, titulo) {
   if (hasta < desde) return '<div class="vacio">La fecha final es anterior a la inicial.</div>';
   return '<div class="resumen"><b>' + esc(titulo) + '</b> · ' + fd(desde) + ' ' + desde.getFullYear() + ' – ' + fd(hasta) + ' ' + hasta.getFullYear() +
-    ' · <b>' + diasLab(desde, hasta) + '</b> días laborables</div>' + tarjetasMeses(desde, hasta, true) + cronograma(desde, hasta);
+    ' · <b>' + diasLab(desde, hasta) + '</b> días laborables</div>' + tarjetasMeses(desde, hasta, true, true);
 }
 function vistaMes() {
   var y = S.ref.getFullYear(), m = S.ref.getMonth(), cols = S.finde ? 7 : 5;
@@ -857,6 +891,9 @@ function abrirActividad(a, fecha, comp) {
 $('#bNueva').onclick = function () { abrirActividad(null, null, enSemanal()); };
 $('#fAct').addEventListener('submit', async function (e) {
   e.preventDefault();
+  var bt = $('#fAct button[type=submit]');
+  if (bt.dataset.busy) return;
+  await unaVez(bt, 'Guardando…', async function () {
   var r = await llamar(modoComp ? 'guardarSemanal' : 'guardarActividad', {
     id: actEdit ? actEdit.id : null, titulo: $('#aTitulo').value, tipoId: $('#aTipo').value, area: $('#aArea').value,
     inicio: $('#aIni').value, fin: $('#aFin').value, responsable: $('#aResp').value, descripcion: $('#aDesc').value
@@ -867,15 +904,18 @@ $('#fAct').addEventListener('submit', async function (e) {
   var i = lista.findIndex(function (x) { return x.id === r.id; });
   if (i >= 0) lista[i] = r; else lista.push(r);
   cerrar('mAct'); render(); toast(modoComp ? 'Actividad complementaria guardada' : 'Actividad guardada');
+  });
 });
 $('#aDel').onclick = async function () {
   if (!actEdit || !confirm('¿Eliminar esta actividad?')) return;
-  var r = await llamar(modoComp ? 'borrarSemanal' : 'borrarActividad', { id: actEdit.id });
-  if (!r) return;
-  var id = actEdit.id;
-  if (modoComp) S.sem = S.sem.filter(function (x) { return x.id !== id; });
-  else S.acts = S.acts.filter(function (x) { return x.id !== id; });
-  cerrar('mAct'); render(); toast('Actividad eliminada');
+  await unaVez($('#aDel'), 'Eliminando…', async function () {
+    var r = await llamar(modoComp ? 'borrarSemanal' : 'borrarActividad', { id: actEdit.id });
+    if (!r) return;
+    var id = actEdit.id;
+    if (modoComp) S.sem = S.sem.filter(function (x) { return x.id !== id; });
+    else S.acts = S.acts.filter(function (x) { return x.id !== id; });
+    cerrar('mAct'); render(); toast('Actividad eliminada');
+  });
 };
 
 /* ---- Configuración ---- */
@@ -995,6 +1035,8 @@ $('#qLogoI').onclick = function () { logos.I = ''; logoPrev(); };
 $('#qLogoD').onclick = function () { logos.D = ''; logoPrev(); };
 
 $('#cGuardar').onclick = async function () {
+  if (this.dataset.busy) return;
+  this.dataset.busy = '1';
   var btn = this, msg = $('#cMsg'), admin = S.usuario.rol === 'admin';
   msg.className = 'msg'; msg.textContent = 'Guardando… (puede tardar unos segundos)';
   btn.disabled = true; btn.textContent = 'Guardando…';
@@ -1045,7 +1087,7 @@ $('#cGuardar').onclick = async function () {
   } catch (e) {
     msg.className = 'msg err'; msg.textContent = 'Error: ' + (e && e.message ? e.message : e);
   } finally {
-    btn.disabled = false; btn.textContent = 'Guardar configuración';
+    btn.disabled = false; btn.textContent = 'Guardar configuración'; delete btn.dataset.busy;
   }
 };
 
