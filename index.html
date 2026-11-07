@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Calendario Escolar</title>
+<style>
+:root{--ac:#0F5AA6;--tint:#e8f2fb;--gris:#e9e9e9;--borde:#c9c9c9;--txt:#222}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--txt);background:#f3f3f3;font-size:14px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer;border:1px solid var(--borde);background:#fff;border-radius:6px;padding:6px 12px}
+button:hover{background:#f0f0f0}
+button.pri{background:var(--ac);color:#fff;border-color:var(--ac)}
+button.pri:hover{filter:brightness(1.12)}
+button.pel{color:#b00020;border-color:#b00020}
+input,select,textarea{border:1px solid var(--borde);border-radius:6px;padding:6px 8px;width:100%;background:#fff}
+label{display:block;font-size:12px;font-weight:bold;margin:8px 0 3px;color:#555}
+.rol-invitado .admin,.rol-lector .admin,.rol-lector .edita{display:none!important}
+.rol-invitado #bClave{display:none!important}
+body:not(.perm-excel) #bExcel,body:not(.perm-excel) #bWord{display:none!important}
+.fila-us{display:grid;grid-template-columns:1fr 110px 1fr 1fr 34px;gap:6px;align-items:center;margin-bottom:5px}
+.anio-blk{border:1px solid var(--borde);border-radius:8px;padding:8px;margin-bottom:10px;background:#f7fafd}
+.anio-cab{display:grid;grid-template-columns:1fr 140px 140px 34px;gap:6px;margin-bottom:6px}
+.anio-cab input:first-child{font-weight:bold}
+.perm-lista label{display:block;font-weight:normal;font-size:13px;color:#222;margin:4px 0}
+.perm-lista input{width:auto;margin-right:6px}
+
+/* login */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#e8f2fb,#cfe5f7)}
+.lcard{background:#fff;padding:26px;border-radius:12px;width:340px;box-shadow:0 4px 20px #0003}
+.lcard h1{margin:0 0 10px;color:var(--ac);font-size:22px}
+.lcard h2{margin:6px 0 4px;font-size:15px}
+.lcard hr{border:0;border-top:1px solid var(--borde);margin:16px 0}
+.lcard button{width:100%;margin-top:14px;padding:10px}
+.ayuda{font-size:12px;color:#555;margin:0 0 4px}
+.msg{min-height:18px;margin:8px 0 0;font-size:13px;color:#0a6b2d}
+.msg.err{color:#b00020}
+
+/* barra y controles */
+.barra{background:var(--ac);color:#fff;display:flex;align-items:center;gap:8px;padding:8px 16px;flex-wrap:wrap}
+.barra b{flex:1;font-size:16px}
+.barra button{background:transparent;color:#fff;border-color:#ffffff88;padding:4px 10px}
+.barra button:hover{background:#ffffff22}
+.controles{background:#fff;border-bottom:1px solid var(--borde);padding:8px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tabs{display:flex;gap:4px}
+.tabs button{border-radius:6px 6px 0 0}
+.tabs button.act{background:var(--ac);color:#fff;border-color:var(--ac)}
+.sep{flex:1}
+.ctl{display:flex;gap:6px;align-items:center}
+.ctl input[type=date],.ctl select{width:auto}
+.ctl label{margin:0;display:inline}
+#etqNav{font-weight:bold;min-width:140px;text-align:center}
+
+/* documento */
+#doc{background:#fff;margin:14px auto;max-width:1150px;padding:18px 22px;box-shadow:0 1px 6px #0002}
+.enc{display:grid;grid-template-columns:90px 1fr 90px;align-items:center;gap:10px;border-bottom:3px solid var(--ac);padding-bottom:8px;margin-bottom:10px}
+.enc img{max-width:90px;max-height:80px;object-fit:contain}
+.enc .t{text-align:center}
+.enc .t h1{margin:0;font-size:19px}
+.enc .t h2{margin:2px 0 0;font-size:15px;font-weight:bold;color:var(--ac)}
+.enc .t p{margin:2px 0 0;font-size:12px;color:#555}
+.enc .t p.lema{font-style:italic}
+.enc .t p.info{font-size:11px}
+.resumen{background:var(--tint);border-left:4px solid var(--ac);padding:6px 10px;margin:8px 0;font-size:13px}
+.vacio{padding:30px;text-align:center;color:#777}
+
+/* tarjetas de mes (vista tipo imagen 1) */
+.grid-meses{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mes{border:1px solid var(--borde);break-inside:avoid}
+.mes-t{background:var(--ac);color:#fff;text-align:center;font-weight:bold;letter-spacing:1px;padding:3px;font-size:13px;text-transform:uppercase}
+.mes-c{display:flex;gap:6px;padding:5px;min-height:118px}
+.mini{border-collapse:collapse;font-size:11px;flex:0 0 auto}
+.mini th{background:var(--gris);padding:1px 4px;font-size:10px}
+.mini td{width:22px;height:17px;text-align:center;border:1px solid #e3e3e3;cursor:pointer}
+.mini td.fds{background:#f1f1f1;color:#777}
+.mini td.fuera{color:#ccc;background:#fafafa;cursor:default}
+.mini td.marca{color:#fff;font-weight:bold}
+.lista{list-style:none;margin:0;padding:0;font-size:11px;flex:1;line-height:1.3}
+.lista li{margin-bottom:2px;cursor:pointer}
+.lista i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}
+.lista small{color:#666}
+.grid-meses.una{grid-template-columns:1fr}
+.grid-meses.una .mes-c{min-height:0}
+.tm{border-collapse:collapse;width:100%;font-size:12px;align-self:flex-start}
+.tm th{background:var(--gris);padding:3px 6px;text-align:left;font-size:11px;border:1px solid var(--borde)}
+.tm td{border:1px solid #e3e3e3;padding:3px 6px;vertical-align:top}
+.tm td.f{width:90px;white-space:nowrap}
+.tm td.r{width:30%}
+.tm tr[data-id]{cursor:pointer}
+.tm i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.sem-top{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:12px}
+.sem-top th{background:var(--ac);color:#fff;padding:5px;border:1px solid #fff;cursor:pointer}
+.sem-top th.lab{width:110px;cursor:default}
+.sem-top td{border:1px solid var(--borde);padding:5px 6px;vertical-align:top;font-size:12px;min-height:60px;height:70px}
+.sem-top td.lab{background:var(--tint);font-weight:bold;text-align:center;vertical-align:middle}
+.sem-top .ob{display:block;margin-bottom:3px}
+.sem-act{width:100%;border-collapse:collapse}
+.sem-act th{background:var(--ac);color:#fff;padding:5px;border:1px solid #fff;text-align:left}
+.sem-act td{border:1px solid var(--borde);padding:5px 8px;vertical-align:top}
+.sem-act td.f{width:130px}
+.sem-act td.r{width:30%}
+.sem-act tr[data-id]{cursor:pointer}
+.sem-act i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}
+.meta{font-size:12px;color:#666;margin:10px 0 0}
+.tag{display:inline-block;font-size:10px;padding:0 6px;border-radius:9px;background:var(--tint);color:var(--ac);border:1px solid #bcd7ef;margin-left:5px;white-space:nowrap}
+.comp-b{display:inline-block;font-size:10px;padding:0 6px;border-radius:9px;background:#fff3d6;color:#8a5a00;border:1px solid #f0cf85;margin-left:5px;white-space:nowrap}
+tr.comp td{background:#fffaf0}
+.aviso{background:var(--tint);border-left:4px solid var(--ac);padding:6px 10px;font-size:12px;margin:8px 0}
+.nota{font-size:12px;color:#555;margin:8px 0 0}
+
+/* cronograma (vista tipo imagen 3) */
+.crono{width:100%;border-collapse:collapse;margin-top:12px;font-size:12px}
+.crono th{background:var(--ac);color:#fff;padding:5px;border:1px solid #fff}
+.crono td{border:1px solid var(--borde);padding:4px 6px;vertical-align:top}
+.crono td.s{width:70px;font-weight:bold;text-align:center}
+.crono td.f{width:130px}
+.crono td.n{width:60px;text-align:center}
+.crono tr.tot td{background:var(--tint);font-weight:bold}
+.crono .a{display:block;margin-bottom:2px;cursor:pointer}
+
+/* vista mensual (tipo imagen 2) */
+.mtab{width:100%;border-collapse:collapse;table-layout:fixed}
+.mtab th{background:var(--ac);color:#fff;padding:5px;border:1px solid #fff}
+.mtab td{border:1px solid var(--borde);height:92px;vertical-align:top;padding:2px 4px;cursor:pointer;font-size:11px}
+.mtab td.fuera{background:#f6f6f6;color:#bbb}
+.mtab td .dn{font-weight:bold;font-size:12px}
+.chip{display:block;margin-top:2px;padding:1px 3px;border-left:3px solid;line-height:1.25;background:#fff8}
+.titulo-mes{background:var(--ac);color:#fff;text-align:center;font-weight:bold;font-size:16px;padding:5px;text-transform:uppercase}
+
+/* semana / día */
+.lt{width:100%;border-collapse:collapse}
+.lt td{border:1px solid var(--borde);padding:6px 8px;vertical-align:top}
+.lt td.d{width:150px;font-weight:bold;background:#fafafa}
+.lt .a{display:block;margin-bottom:3px;cursor:pointer}
+.dia-g h3{margin:6px 0;color:var(--ac)}
+
+/* leyenda */
+.leyenda{margin-top:12px;border-top:1px solid var(--borde);padding-top:6px;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;align-items:center}
+.leyenda span i{display:inline-block;width:14px;height:14px;vertical-align:middle;margin-right:4px;border-radius:2px}
+.pie{font-size:11px;color:#555;margin-top:6px}
+
+/* modales */
+.modal{position:fixed;inset:0;background:#0006;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:30px 10px;z-index:10}
+.caja{background:#fff;border-radius:10px;padding:18px;width:100%;max-width:560px}
+.caja.ancha{max-width:760px}
+.caja h3{margin:0 0 6px;color:var(--ac)}
+.fila2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.acciones{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.acciones .izq{margin-right:auto}
+.fila-tipo{display:grid;grid-template-columns:44px 1fr auto 34px;gap:6px;align-items:center;margin-bottom:5px}
+.fila-tipo input[type=color]{padding:0;height:30px}
+.fila-per{display:grid;grid-template-columns:1fr 140px 140px 34px;gap:6px;margin-bottom:5px}
+.fila-ed{display:grid;grid-template-columns:1.3fr 1fr auto 34px;gap:6px;align-items:center;margin-bottom:5px}
+.fila-tipo label,.fila-per label,.fila-ed label{margin:0}
+.logo-prev{max-height:50px;max-width:120px;display:block;margin-top:4px}
+h4{margin:16px 0 4px;border-bottom:1px solid var(--borde);padding-bottom:3px}
+.resp-item{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #eee}
+.resp-item span{flex:1}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:9px 16px;border-radius:8px;z-index:30;max-width:90vw}
+#toast.err{background:#b00020}
+
+@media print{
+  .noprint,.barra,.controles,.modal,#toast{display:none!important}
+  body{background:#fff}
+  #doc{margin:0;box-shadow:none;max-width:none;padding:0}
+  .mtab td{height:80px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="lcard">
+    <h1>Calendario Escolar</h1>
+    <form id="fLogin">
+      <h2>Ingresar</h2>
+      <p class="ayuda">Administrador, invitados (cada área con su usuario) y consulta.</p>
+      <label for="lUser">Usuario</label>
+      <input id="lUser" autocomplete="username" required>
+      <label for="lPass">Contraseña</label>
+      <input id="lPass" type="password" autocomplete="current-password" required>
+      <button class="pri" type="submit">Ingresar</button>
+      <p id="lErr" class="msg err"></p>
+    </form>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" hidden>
+  <div class="barra noprint">
+    <b>📅 Calendario Escolar</b>
+    <span id="quien"></span>
+    <button id="bConfig" hidden>⚙ Configuración</button>
+    <button id="bResp" class="admin">💾 Respaldos</button>
+    <button id="bActualizar" title="Traer los cambios de otros usuarios">🔄 Actualizar</button>
+    <button id="bClave">🔑 Clave</button>
+    <button id="bSalir">Salir</button>
+  </div>
+
+  <div class="controles noprint">
+    <div class="tabs" id="tabs">
+      <button data-v="anual">Anual</button>
+      <button data-v="trimestre">Trimestre</button>
+      <button data-v="periodo">Período</button>
+      <button data-v="mes">Mes</button>
+      <button data-v="semana">Semana</button>
+      <button data-v="dia">Día</button>
+    </div>
+    <div class="ctl" id="cAnioSel"><label for="selAnio">Año lectivo</label><select id="selAnio"></select></div>
+    <div class="ctl" id="cNav">
+      <button id="bPrev">‹</button><span id="etqNav"></span><button id="bNext">›</button><button id="bHoy">Hoy</button>
+    </div>
+    <div class="ctl" id="cTrim"><select id="selTrim"></select></div>
+    <div class="ctl" id="cPer">
+      <label for="pDesde">Desde</label><input type="date" id="pDesde">
+      <label for="pHasta">Hasta</label><input type="date" id="pHasta">
+    </div>
+    <label class="ctl" id="cFinde" style="margin:0"><input type="checkbox" id="chkFinde" style="width:auto"> Ver fines de semana</label>
+    <span class="sep"></span>
+    <button id="bNueva" class="pri edita">＋ Actividad</button>
+    <select id="selHoja" style="width:auto" title="Orientación al imprimir">
+      <option value="landscape">Hoja horizontal</option><option value="portrait">Hoja vertical</option>
+    </select>
+    <button id="bPrint">🖨 Imprimir / PDF</button>
+    <button id="bExcel">Excel</button>
+    <button id="bWord">Word</button>
+  </div>
+
+  <div id="doc">
+    <div id="enc"></div>
+    <div id="vista"></div>
+    <div id="leyenda"></div>
+  </div>
+</div>
+
+<!-- MODAL ACTIVIDAD -->
+<div class="modal" id="mAct" hidden>
+  <form class="caja" id="fAct">
+    <h3 id="mActT">Actividad</h3>
+    <p class="aviso" id="aAviso" hidden></p>
+    <label for="aTitulo">Título</label><input id="aTitulo" maxlength="200" required>
+    <label for="aTipo">Tipo</label><select id="aTipo"></select>
+    <label for="aArea">Área / comisión</label><select id="aArea"></select>
+    <div class="fila2">
+      <div><label for="aIni">Fecha de inicio</label><input type="date" id="aIni" required></div>
+      <div><label for="aFin">Fecha de fin (opcional)</label><input type="date" id="aFin"></div>
+    </div>
+    <label for="aResp">Responsable</label><input id="aResp" maxlength="120">
+    <label for="aDesc">Observaciones</label><textarea id="aDesc" rows="3" maxlength="1000"></textarea>
+    <div class="acciones">
+      <button type="button" id="aDel" class="pel izq">Eliminar</button>
+      <button type="button" data-cerrar="mAct">Cerrar</button>
+      <button type="submit" class="pri edita">Guardar</button>
+    </div>
+  </form>
+</div>
+
+<!-- MODAL CONFIGURACIÓN -->
+<div class="modal" id="mCfg" hidden>
+  <div class="caja ancha">
+    <h3>Configuración</h3>
+    <div data-sec="enc">
+    <h4>Encabezado</h4>
+    <label for="cInst">Institución</label><input id="cInst">
+    <div class="fila2">
+      <div><label for="cSub">Título del calendario</label><input id="cSub"></div>
+      <div><label for="cReg">Régimen</label><input id="cReg" placeholder="Sierra / Costa - Galápagos"></div>
+    </div>
+    <div class="fila2">
+      <div><label for="cColor">Color principal</label><input type="color" id="cColor" style="height:34px;padding:2px"></div>
+      <div></div>
+    </div>
+    <div class="fila2">
+      <div><label>Logo izquierdo</label><input type="file" id="fLogoI" accept="image/*"><img id="pLogoI" class="logo-prev" alt=""><button type="button" id="qLogoI">Quitar</button></div>
+      <div><label>Logo derecho</label><input type="file" id="fLogoD" accept="image/*"><img id="pLogoD" class="logo-prev" alt=""><button type="button" id="qLogoD">Quitar</button></div>
+    </div>
+    <label for="cLema">Lema o frase bajo el nombre (opcional)</label><input id="cLema" maxlength="200">
+    <div class="fila2">
+      <div><label for="cAmie">Código AMIE (opcional)</label><input id="cAmie" maxlength="200"></div>
+      <div><label for="cTel">Teléfono (opcional)</label><input id="cTel" maxlength="200"></div>
+    </div>
+    <div class="fila2">
+      <div><label for="cDir">Dirección (opcional)</label><input id="cDir" maxlength="200"></div>
+      <div><label for="cCorreo">Correo institucional (opcional)</label><input id="cCorreo" maxlength="200"></div>
+    </div>
+    <div class="ayuda">Los logos y estos datos salen en el encabezado de todos los cronogramas (pantalla, PDF, Excel y Word). Usa logos con fondo transparente o blanco.</div>
+    <label for="cPie">Texto al pie (opcional)</label><input id="cPie">
+    <label for="cAreas">Áreas / comisiones (una por línea: Rectorado, Vicerrectorado, DECE, Inspección, Secretaría…)</label><textarea id="cAreas" rows="5"></textarea>
+    </div>
+
+    <div data-sec="carpetas">
+    <h4>Carpetas de Google Drive</h4>
+    <label for="cCarpeta">1. Carpeta del PROGRAMA: aquí queda el archivo original con los datos de trabajo</label>
+    <input id="cCarpeta" placeholder="https://drive.google.com/drive/folders/...">
+    <div class="ayuda" id="cCarpetaNom"></div>
+    <label for="cConsulta">2. Carpeta de CONSULTA: espejo con el historial (no se borra), PDF/Excel/Word generados y respaldos</label>
+    <input id="cConsulta" placeholder="https://drive.google.com/drive/folders/...">
+    <div class="ayuda" id="cConsultaNom"></div>
+    <div class="ayuda">Si la carpeta 2 es de otra cuenta de Gmail, debe estar compartida con la cuenta dueña de este programa como «Editor». Debe ser distinta de la carpeta 1.</div>
+    </div>
+
+    <div data-sec="usuarios">
+    <h4>Usuarios: invitados por área y consulta</h4>
+    <div class="ayuda" style="margin-bottom:6px">Cada área tiene su usuario y contraseña. Para cambiar una contraseña escribe una nueva (mínimo 8 caracteres); si la dejas vacía no cambia. «Consulta» solo ve e imprime.</div>
+    <div id="listaUs"></div>
+    <datalist id="dlAreas"></datalist>
+    <button type="button" id="addUs">＋ Añadir usuario</button>
+    <h4>Permisos extra de los invitados</h4>
+    <div class="ayuda">Siempre pueden ver, agregar actividades de su área, editar o eliminar las que ellos registraron e imprimir en PDF. Marca lo que quieras permitirles además:</div>
+    <div class="perm-lista" id="listaPerm">
+      <label><input type="checkbox" value="excel">Exportar a Excel y Word</label>
+      <label><input type="checkbox" value="leyendas">Cambiar la leyenda (tipos y colores)</label>
+      <label><input type="checkbox" value="fechas">Cambiar las fechas de trimestres / períodos</label>
+    </div>
+    </div>
+
+    <div data-sec="leyenda">
+    <h4>Leyenda (tipos de actividad y colores)</h4>
+    <div style="font-size:12px;color:#666;margin-bottom:6px">«Sin clases» = ese día no cuenta como día laborable en los conteos.</div>
+    <div id="listaTipos"></div>
+    <button type="button" id="addTipo">＋ Añadir tipo</button>
+    </div>
+
+    <div data-sec="periodos">
+    <h4>Años lectivos y sus trimestres / períodos</h4>
+    <div class="ayuda" style="margin-bottom:6px">Puedes tener varios años lectivos. Cada uno tiene su propio calendario anual y sus trimestres; las actividades se guardan por fecha, así que nada se pierde al cambiar de año.</div>
+    <div id="listaAnios"></div>
+    <button type="button" id="addAnio" class="admin">＋ Añadir año lectivo</button>
+    </div>
+
+    <p id="cMsg" class="msg err"></p>
+    <div class="acciones">
+      <button type="button" data-cerrar="mCfg">Cancelar</button>
+      <button type="button" id="cGuardar" class="pri">Guardar configuración</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RESPALDOS -->
+<div class="modal" id="mResp" hidden>
+  <div class="caja ancha">
+    <h3>Respaldos en Google Drive</h3>
+    <p style="font-size:13px;color:#555">Aquí solo se hace un respaldo cuando tú lo pides (se conservan los últimos 30). Restaurar reemplaza actividades, leyenda, períodos, encabezado y complementarias, y antes guarda el estado actual. Aparte, el respaldo del <b>cronograma semanal</b> se crea solo cada semana en la carpeta «Respaldos semanales» de la carpeta de consulta.</p>
+    <button id="rAhora" class="pri">Respaldar ahora</button>
+    <div id="listaResp" style="margin-top:10px"></div>
+    <div class="acciones"><button type="button" data-cerrar="mResp">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- MODAL CLAVE -->
+<div class="modal" id="mClave" hidden>
+  <form class="caja" id="fClave">
+    <h3>Cambiar contraseña</h3>
+    <label for="kAct">Clave actual</label><input type="password" id="kAct" autocomplete="current-password" required>
+    <label for="kNue">Nueva clave (mínimo 8 caracteres)</label><input type="password" id="kNue" autocomplete="new-password" minlength="8" required>
+    <label for="kRep">Repite la nueva clave</label><input type="password" id="kRep" autocomplete="new-password" minlength="8" required>
+    <div class="acciones">
+      <button type="button" data-cerrar="mClave">Cancelar</button>
+      <button type="submit" class="pri">Cambiar</button>
+    </div>
+  </form>
+</div>
+
+<!-- MODAL: ¿guardar copia en Drive? -->
+<div class="modal" id="mGuardar" hidden>
+  <div class="caja">
+    <h3>¿Guardar copia en Drive?</h3>
+    <p id="gTxt"></p>
+    <div class="acciones">
+      <button type="button" id="gCan">Cancelar</button>
+      <button type="button" id="gNo"></button>
+      <button type="button" id="gSi" class="pri"></button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" hidden></div>
+
+<script>
+/* Si esta página se aloja FUERA de Google (hosting propio o GitHub Pages), pega aquí la URL de la aplicación web (termina en /exec).
+   Si se abre desde la URL de Apps Script no hace falta tocar esto. */
+var API_URL = 'https://script.google.com/macros/s/AKfycbzLFUmWqJysPNlD4g2WHw6vUy9Z6Hc_GyjpkkDcYopBhXAsQa1WYA2kfjjJUNM6nghS/exec';
+
+/* ============ Utilidades ============ */
+var $ = function (s) { return document.querySelector(s); };
+var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+var pad = function (n) { return String(n).padStart(2, '0'); };
+var iso = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+var parse = function (s) { var p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); };
+var addDays = function (d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); };
+var lunes = function (d) { return addDays(d, -((d.getDay() + 6) % 7)); };
+var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+var MESC = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+var DIAS = ['L','M','M','J','V','S','D'];
+var DIASL = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+var fd = function (d) { return d.getDate() + ' ' + MESC[d.getMonth()]; };
+var fdl = function (d) { return DIASL[(d.getDay() + 6) % 7] + ' ' + d.getDate() + ' de ' + MESES[d.getMonth()].toLowerCase() + ' de ' + d.getFullYear(); };
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function toast(msg, err) {
+  var t = $('#toast'); t.textContent = msg; t.className = err ? 'err' : ''; t.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(function () { t.hidden = true; }, err ? 5000 : 2500);
+}
+function cmp(a, b) { return a.inicio < b.inicio ? -1 : a.inicio > b.inicio ? 1 : String(a.titulo).localeCompare(String(b.titulo)); }
+
+/* ============ Estado ============ */
+var S = { token: null, usuario: null, cfg: {}, tipos: [], periodos: [], acts: [], sem: [],
+          vista: 'anual', ref: new Date(), periodoId: null, finde: false };
+var tipoPor = {}, porDia = {};
+
+// Un solo canal con el servidor: dentro de Google usa google.script.run; alojada fuera, hace un POST a la URL /exec (sin cookies).
+function rpc(token, accion, datos) {
+  return new Promise(function (ok, fail) {
+    if (window.google && google.script && google.script.run) {
+      google.script.run.withSuccessHandler(ok).withFailureHandler(fail).api(token, accion, datos || {});
+    } else if (!API_URL) {
+      fail(new Error('Falta pegar la URL /exec en API_URL (al inicio del script de esta página).'));
+    } else {
+      fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, redirect: 'follow', credentials: 'omit',
+                       body: JSON.stringify({ token: token, accion: accion, d: datos || {} }) })
+        .then(function (r) { return r.json(); }).then(ok, fail);
+    }
+  });
+}
+function llamar(accion, datos) {
+  return rpc(S.token, accion, datos).then(function (r) {
+    if (r && r.error === 'SESION') { toast('Tu sesión expiró. Ingresa de nuevo.', true); salirLocal(); return null; }
+    if (r && r.error) { S.ultimoError = r.mensaje || r.error; toast(S.ultimoError, true); return null; }
+    return r && r.datos !== undefined ? r.datos : (r || {});
+  }, function (e) { S.ultimoError = 'Error: ' + (e && e.message ? e.message : e); toast(S.ultimoError, true); return null; });
+}
+
+/* ============ Sesión ============ */
+$('#fLogin').addEventListener('submit', function (e) {
+  e.preventDefault();
+  $('#lErr').textContent = '';
+  rpc(null, 'login', { usuario: $('#lUser').value, clave: $('#lPass').value }).then(function (r) {
+    if (r.error) { $('#lErr').textContent = r.mensaje; return; }
+    S.token = r.token;
+    try { sessionStorage.setItem('cet', r.token); } catch (x) {}
+    $('#lPass').value = '';
+    iniciar();
+  }, function (er) { $('#lErr').textContent = 'Error: ' + er.message; });
+});
+function salirLocal() {
+  S.token = null;
+  try { sessionStorage.removeItem('cet'); } catch (x) {}
+  $('#app').hidden = true; $('#login').hidden = false;
+}
+$('#bSalir').addEventListener('click', function () { llamar('logout').then(salirLocal); });
+
+async function iniciar() {
+  var d = await llamar('cargar');
+  if (!d) return;
+  try { sessionStorage.setItem('cet', S.token); } catch (x) {}
+  aplicarDatos(d);
+  $('#login').hidden = true; $('#app').hidden = false;
+  render();
+}
+function aplicarDatos(d) {
+  S.usuario = d.usuario; S.cfg = d.config; S.periodos = d.periodos; S.anios = d.anios || []; S.carpetaNombre = d.carpetaNombre || ''; S.consultaNombre = d.consultaNombre || '';
+  S.permisos = d.permisos || []; S.usuarios = d.usuarios || []; S.ver = d.version;
+  S.tipos = d.tipos.map(function (t) { return { id: t.id, nombre: t.nombre, color: t.color, sinClases: t.sinClases === 'SI' || t.sinClases === true }; });
+  S.acts = d.actividades.map(function (a) { a.fin = a.fin || a.inicio; return a; });
+  S.sem = (d.semanal || []).map(function (a) { a.fin = a.fin || a.inicio; return a; });
+  document.body.className = 'rol-' + S.usuario.rol + (tienePerm('excel') ? ' perm-excel' : '');
+  $('#bConfig').hidden = !(tienePerm('leyendas') || tienePerm('fechas') || S.usuario.rol === 'admin');
+  document.documentElement.style.setProperty('--ac', /^#[0-9a-f]{6}$/i.test(S.cfg.color) ? S.cfg.color : '#0F5AA6');
+  $('#quien').textContent = S.usuario.rol === 'invitado' ? S.usuario.nombre + ' · invitado' : S.usuario.nombre + ' (' + S.usuario.rol + ')';
+  var hoy = new Date(), hi = iso(hoy);
+  if (!S.anioId || !S.anios.some(function (a) { return a.id === S.anioId; })) {
+    var ordenados = S.anios.slice().sort(function (a, b) { return a.inicio < b.inicio ? -1 : 1; });
+    var dentro = ordenados.filter(function (a) { return a.inicio <= hi && a.fin >= hi; })[0];
+    var pasado = ordenados.filter(function (a) { return a.inicio <= hi; }).pop();
+    S.anioId = (dentro || pasado || ordenados[0] || {}).id || null;
+  }
+  if (!S.periodoId || !periodosAnio().some(function (p) { return p.id === S.periodoId; })) {
+    var v = periodosValidos();
+    var actual = v.filter(function (p) { return p.inicio <= iso(hoy) && p.fin >= iso(hoy); })[0];
+    S.periodoId = (actual || v[0] || {}).id || null;
+  }
+}
+function tienePerm(p) { return (S.permisos || []).indexOf(p) >= 0; }
+// Crear actividades: administrador e invitados. Modificar/eliminar: el administrador; el invitado solo las que él registró.
+function puedeEditar() { return S.usuario.rol === 'admin' || S.usuario.rol === 'invitado'; }
+function puedeModificar(a) {
+  if (S.usuario.rol === 'admin') return true;
+  return S.usuario.rol === 'invitado' && !!a.propia;
+}
+// Quién puede guardar copias de lo que imprime en la carpeta de consulta
+function puedeGuardarCopia() { return S.usuario.rol === 'admin' || S.usuario.rol === 'invitado'; }
+// El semanal (y el día) muestran lo del anual/mensual en solo lectura; ahí solo se editan las complementarias.
+function enSemanal() { return S.vista === 'semana' || S.vista === 'dia'; }
+function areasLista() { return String(S.cfg.areas || '').split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean); }
+function tagArea(a) { return a.area ? '<span class="tag">' + esc(a.area) + '</span>' : ''; }
+function anioActual() { return S.anios.filter(function (a) { return a.id === S.anioId; })[0] || S.anios[0] || null; }
+function anioNombre() { var a = anioActual(); return a ? a.nombre : (S.cfg.anio || ''); }
+function periodosAnio() { return S.periodos.filter(function (p) { return p.anioId === S.anioId; }); }
+function periodosValidos() { return periodosAnio().filter(function (p) { return p.inicio && p.fin; }); }
+
+/* ============ Índices ============ */
+function indexar() {
+  tipoPor = {}; S.tipos.forEach(function (t) { tipoPor[t.id] = t; });
+  porDia = {};
+  S.acts.forEach(function (a) {
+    var d = parse(a.inicio), f = parse(a.fin), n = 0;
+    while (d <= f && n++ < 400) { var k = iso(d); (porDia[k] = porDia[k] || []).push(a); d = addDays(d, 1); }
+  });
+}
+function colorDe(a) { return (tipoPor[a.tipoId] || { color: '#888' }).color; }
+function tipoDia(acts) {
+  var t = acts.map(function (a) { return tipoPor[a.tipoId]; }).filter(Boolean);
+  return t.filter(function (x) { return x.sinClases; })[0] || t[0] || { color: '#888' };
+}
+function diasLab(a, b) {
+  var n = 0;
+  for (var d = new Date(a); d <= b; d = addDays(d, 1)) {
+    var w = d.getDay(); if (w === 0 || w === 6) continue;
+    var acts = porDia[iso(d)];
+    if (acts && acts.some(function (x) { return tipoPor[x.tipoId] && tipoPor[x.tipoId].sinClases; })) continue;
+    n++;
+  }
+  return n;
+}
+function actsEntre(a, b) {
+  var A = iso(a), B = iso(b);
+  return S.acts.filter(function (x) { return x.inicio <= B && x.fin >= A; }).sort(cmp);
+}
+// Para el semanal/día: actividades del anual-mensual (migradas) + complementarias de la semana.
+function itemsSemana(a, b) {
+  var A = iso(a), B = iso(b), tr = function (comp) { return function (x) { return { a: x, comp: comp }; }; };
+  var m = S.acts.filter(function (x) { return x.inicio <= B && x.fin >= A; }).map(tr(false));
+  var c = S.sem.filter(function (x) { return x.inicio <= B && x.fin >= A; }).map(tr(true));
+  return m.concat(c).sort(function (p, q) { return cmp(p.a, q.a) || (p.comp - q.comp); });
+}
+function rangoCorto(a) {
+  var s = parse(a.inicio), e = parse(a.fin);
+  if (a.inicio === a.fin) return String(s.getDate());
+  if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) return s.getDate() + '–' + e.getDate();
+  return s.getDate() + '/' + (s.getMonth() + 1) + '–' + e.getDate() + '/' + (e.getMonth() + 1);
+}
+function rangoLargo(a) {
+  var s = parse(a.inicio), e = parse(a.fin);
+  return a.inicio === a.fin ? fd(s) : fd(s) + ' – ' + fd(e);
+}
+
+/* ============ Rangos y vistas ============ */
+function rangoActual() {
+  var v = S.vista, r = S.ref;
+  if (v === 'anual') { var an = anioActual(); return [parse(an && an.inicio || (r.getFullYear() + '-01-01')), parse(an && an.fin || (r.getFullYear() + '-12-31'))]; }
+  if (v === 'trimestre') { var p = S.periodos.filter(function (x) { return x.id === S.periodoId; })[0]; return p && p.inicio && p.fin ? [parse(p.inicio), parse(p.fin)] : [r, r]; }
+  if (v === 'periodo') return [parse($('#pDesde').value || iso(r)), parse($('#pHasta').value || iso(r))];
+  if (v === 'mes') return [new Date(r.getFullYear(), r.getMonth(), 1), new Date(r.getFullYear(), r.getMonth() + 1, 0)];
+  if (v === 'semana') { var l = lunes(r); return [l, addDays(l, 6)]; }
+  return [r, r];
+}
+function mesesEntre(a, b) {
+  var out = [], y = a.getFullYear(), m = a.getMonth();
+  while ((y < b.getFullYear() || (y === b.getFullYear() && m <= b.getMonth())) && out.length < 24) {
+    out.push([y, m]); m++; if (m > 11) { m = 0; y++; }
+  }
+  return out;
+}
+
+function miniMes(y, m, desde, hasta) {
+  var cols = S.finde ? 7 : 5, nd = new Date(y, m + 1, 0).getDate(), col = 0;
+  var h = '<table class="mini"><thead><tr>' + DIAS.slice(0, cols).map(function (d) { return '<th>' + d + '</th>'; }).join('') + '</tr></thead><tbody><tr>';
+  for (var d = 1; d <= nd; d++) {
+    var f = new Date(y, m, d), dow = (f.getDay() + 6) % 7;
+    if (dow >= cols) continue;                       // fin de semana oculto
+    if (dow === 0 && col > 0) { while (col < cols) { h += '<td></td>'; col++; } h += '</tr><tr>'; col = 0; }
+    while (col < dow) { h += '<td></td>'; col++; }
+    var k = iso(f), acts = porDia[k], cl = '', st = '';
+    var fuera = (desde && f < desde) || (hasta && f > hasta);
+    if (fuera) cl = ' class="fuera"';
+    else if (acts) { cl = ' class="marca"'; st = ' style="background:' + tipoDia(acts).color + '"'; }
+    else if (dow >= 5) cl = ' class="fds"';
+    h += '<td' + cl + st + (fuera ? '' : ' data-f="' + k + '"') + '>' + d + '</td>';
+    col++;
+  }
+  while (col > 0 && col < cols) { h += '<td></td>'; col++; }
+  return h + '</tr></tbody></table>';
+}
+function listaMes(y, m, desde, hasta) {
+  var ini = new Date(y, m, 1), fin = new Date(y, m + 1, 0);
+  var a0 = desde && desde > ini ? desde : ini, a1 = hasta && hasta < fin ? hasta : fin;
+  var items = actsEntre(a0, a1);
+  return '<ul class="lista">' + items.map(function (a) {
+    return '<li data-id="' + esc(a.id) + '"><i style="background:' + colorDe(a) + '"></i><b>' + rangoCorto(a) + '</b> ' + esc(a.titulo) + tagArea(a) +
+      (a.responsable ? ' <small>(' + esc(a.responsable) + ')</small>' : '') + '</li>';
+  }).join('') + '</ul>';
+}
+function tablaMes(y, m) {
+  var items = actsEntre(new Date(y, m, 1), new Date(y, m + 1, 0));
+  var h = '<table class="tm"><thead><tr><th>Fecha</th><th>Actividad</th><th>Responsable</th></tr></thead><tbody>';
+  if (!items.length) h += '<tr><td colspan="3" style="color:#999">Sin actividades</td></tr>';
+  items.forEach(function (a) {
+    h += '<tr data-id="' + esc(a.id) + '"><td class="f">' + rangoCorto(a) + '</td><td><i style="background:' + colorDe(a) + '"></i>' +
+      esc(a.titulo) + tagArea(a) + '</td><td class="r">' + esc(a.responsable) + '</td></tr>';
+  });
+  return h + '</tbody></table>';
+}
+function tarjetasMeses(desde, hasta, limitar, modoTabla) {
+  var h = '<div class="grid-meses' + (modoTabla ? ' una' : '') + '">';
+  mesesEntre(desde, hasta).forEach(function (ym) {
+    h += '<div class="mes"><div class="mes-t">' + MESES[ym[1]] + ' ' + ym[0] + '</div><div class="mes-c">' +
+      miniMes(ym[0], ym[1], limitar ? desde : null, limitar ? hasta : null) +
+      (modoTabla ? tablaMes(ym[0], ym[1]) : listaMes(ym[0], ym[1], limitar ? desde : null, limitar ? hasta : null)) + '</div></div>';
+  });
+  return h + '</div>';
+}
+function cronograma(desde, hasta) {
+  var h = '<table class="crono"><thead><tr><th>Semana</th><th>Fechas</th><th>Actividades relevantes</th><th>Días laborables</th></tr></thead><tbody>';
+  var lun = lunes(desde), n = 1, total = 0;
+  while (lun <= hasta && n < 120) {
+    var vie = addDays(lun, 4), dom = addDays(lun, 6);
+    var a0 = lun < desde ? desde : lun, a1 = (S.finde ? dom : vie) > hasta ? hasta : (S.finde ? dom : vie);
+    var lab = diasLab(a0, a1); total += lab;
+    var items = actsEntre(a0 > lun ? a0 : lun, dom > hasta ? hasta : dom);
+    h += '<tr><td class="s">Semana ' + n + '</td><td class="f">' + fd(a0) + ' – ' + fd(a1) + '</td><td>' +
+      items.map(function (a) {
+        return '<span class="a" data-id="' + esc(a.id) + '" style="color:' + colorDe(a) + '">• <b>' + rangoLargo(a) + ':</b> ' + esc(a.titulo) + tagArea(a) +
+          (a.responsable ? ' <small style="color:#555">— ' + esc(a.responsable) + '</small>' : '') + '</span>';
+      }).join('') + '</td><td class="n">' + lab + '</td></tr>';
+    lun = addDays(lun, 7); n++;
+  }
+  return h + '<tr class="tot"><td colspan="3" style="text-align:right">Total días laborables</td><td class="n">' + total + '</td></tr></tbody></table>';
+}
+function vistaPeriodo(desde, hasta, titulo) {
+  if (hasta < desde) return '<div class="vacio">La fecha final es anterior a la inicial.</div>';
+  return '<div class="resumen"><b>' + esc(titulo) + '</b> · ' + fd(desde) + ' ' + desde.getFullYear() + ' – ' + fd(hasta) + ' ' + hasta.getFullYear() +
+    ' · <b>' + diasLab(desde, hasta) + '</b> días laborables</div>' + tarjetasMeses(desde, hasta, true) + cronograma(desde, hasta);
+}
+function vistaMes() {
+  var y = S.ref.getFullYear(), m = S.ref.getMonth(), cols = S.finde ? 7 : 5;
+  var h = '<div class="titulo-mes">' + MESES[m] + ' ' + y + '</div><table class="mtab"><thead><tr>' +
+    DIASL.slice(0, cols).map(function (d) { return '<th>' + d + '</th>'; }).join('') + '</tr></thead><tbody>';
+  var ult = new Date(y, m + 1, 0);
+  for (var l = lunes(new Date(y, m, 1)); l <= ult; l = addDays(l, 7)) {
+    h += '<tr>';
+    for (var i = 0; i < cols; i++) {
+      var d = addDays(l, i), k = iso(d), acts = porDia[k] || [];
+      var fuera = d.getMonth() !== m;
+      var sin = acts.filter(function (a) { return tipoPor[a.tipoId] && tipoPor[a.tipoId].sinClases; })[0];
+      var bg = sin && !fuera ? ' style="background:' + colorDe(sin) + '22"' : '';
+      h += '<td' + (fuera ? ' class="fuera"' : '') + bg + ' data-f="' + k + '"><span class="dn">' + d.getDate() + '</span>' +
+        (fuera ? '' : acts.map(function (a) {
+          return '<span class="chip" data-id="' + esc(a.id) + '" style="border-color:' + colorDe(a) + '">' + esc(a.titulo) +
+            (a.responsable ? ' <small style="color:#555">(' + esc(a.responsable) + ')</small>' : '') + '</span>';
+        }).join('')) + '</td>';
+    }
+    h += '</tr>';
+  }
+  return h + '</tbody></table>';
+}
+function bloqueItems(items) {
+  if (!items.length) return '<span style="color:#999">Sin actividades</span>';
+  return items.map(function (it) {
+    var a = it.a, t = tipoPor[a.tipoId] || { nombre: '' };
+    return '<span class="a" data-id="' + esc(a.id) + '" style="color:' + colorDe(a) + '">• <b>' + esc(a.titulo) + '</b> <small style="color:#555">[' + esc(t.nombre) + ']' +
+      (a.inicio !== a.fin ? ' ' + rangoLargo(a) : '') + (a.responsable ? ' — ' + esc(a.responsable) : '') + '</small>' + tagArea(a) +
+      (it.comp ? '<span class="comp-b">Complementaria</span>' : '') + '</span>';
+  }).join('');
+}
+function vistaSemana() {
+  var l = lunes(S.ref), n = S.finde ? 7 : 5, fin = addDays(l, n - 1);
+  var h = '<div class="resumen"><b>Cronograma semanal · semana del ' + fd(l) + ' al ' + fd(fin) + '</b> · ' + diasLab(l, addDays(l, 4)) + ' días laborables</div>';
+  // Parte superior: días y observaciones
+  h += '<table class="sem-top"><thead><tr><th class="lab">Días</th>';
+  for (var i = 0; i < n; i++) { var d = addDays(l, i); h += '<th data-f="' + iso(d) + '">' + DIASL[i] + '<br>' + d.getDate() + ' ' + MESC[d.getMonth()] + '</th>'; }
+  h += '</tr></thead><tbody><tr><td class="lab">Observaciones</td>';
+  for (i = 0; i < n; i++) {
+    var dia = addDays(l, i), obs = '';
+    itemsSemana(dia, dia).forEach(function (it) {
+      var a = it.a, t = tipoPor[a.tipoId] || { nombre: '', color: '#888', sinClases: false };
+      if (t.sinClases || a.descripcion) {
+        obs += '<span class="ob" data-id="' + esc(a.id) + '" style="color:' + t.color + '">' + (t.sinClases ? '<b>' + esc(t.nombre) + '</b>' + (a.descripcion ? ': ' : '') : '') + esc(a.descripcion) + '</span>';
+      }
+    });
+    h += '<td data-f="' + iso(dia) + '">' + obs + '</td>';
+  }
+  h += '</tr></tbody></table>';
+  // Debajo: actividades (del anual/mensual + complementarias) y, a la derecha, responsables
+  var items = itemsSemana(l, fin);
+  h += '<table class="sem-act"><thead><tr><th>Fecha</th><th>Actividades</th><th>Responsables</th></tr></thead><tbody>';
+  if (!items.length) h += '<tr><td colspan="3" style="color:#999">Sin actividades esta semana</td></tr>';
+  items.forEach(function (it) {
+    var a = it.a, t = tipoPor[a.tipoId] || { nombre: '' };
+    h += '<tr' + (it.comp ? ' class="comp"' : '') + ' data-id="' + esc(a.id) + '"><td class="f">' + rangoLargo(a) + '</td><td><i style="background:' + colorDe(a) + '"></i><b>' + esc(a.titulo) +
+      '</b> <small style="color:#666">[' + esc(t.nombre) + ']</small>' + tagArea(a) + (it.comp ? '<span class="comp-b">Complementaria</span>' : '') +
+      '</td><td class="r">' + esc(a.responsable) + '</td></tr>';
+  });
+  h += '</tbody></table>';
+  if (puedeEditar()) h += '<p class="nota" data-html2canvas-ignore="true">Las actividades sin la etiqueta «Complementaria» vienen del cronograma anual/mensual y se editan allí. Aquí puedes añadir actividades complementarias solo para esta semana (botón superior o clic en un día).</p>';
+  return h;
+}
+function vistaDia() {
+  var d = S.ref;
+  return '<div class="dia-g"><h3>' + fdl(d) + '</h3>' + bloqueItems(itemsSemana(d, d)) + '</div>';
+}
+function encabezado() {
+  var c = S.cfg, logo = function (u) { return u ? '<img src="' + esc(u) + '" alt="">' : '<span></span>'; };
+  return '<div class="enc">' + logo(c.logoIzq) + '<div class="t"><h1>' + esc(c.institucion) + '</h1>' +
+    (c.lema ? '<p class="lema">' + esc(c.lema) + '</p>' : '') + '<h2>' + esc(c.subtitulo) + ' ' + esc(anioNombre()) + '</h2>' +
+    (c.regimen ? '<p>Régimen ' + esc(c.regimen) + '</p>' : '') + (infoInst() ? '<p class="info">' + esc(infoInst()) + '</p>' : '') +
+    '</div>' + logo(c.logoDer) + '</div>';
+}
+function infoInst() {
+  var c = S.cfg;
+  return [c.amie ? 'AMIE: ' + c.amie : '', c.direccion, c.telefono ? 'Tel. ' + c.telefono : '', c.correo].filter(Boolean).join(' · ');
+}
+function leyenda() {
+  return '<div class="leyenda"><b>Leyenda:</b>' + S.tipos.map(function (t) {
+    return '<span><i style="background:' + t.color + '"></i>' + esc(t.nombre) + '</span>';
+  }).join('') + '</div>' + (S.cfg.pie ? '<div class="pie">' + esc(S.cfg.pie) + '</div>' : '');
+}
+
+function render() {
+  indexar();
+  $('#enc').innerHTML = encabezado();
+  var v = S.vista, h = '', rango, per;
+  if (v === 'anual') {
+    rango = rangoActual();
+    h = '<div class="resumen"><b>Calendario anual ' + esc(anioNombre()) + '</b> · ' + diasLab(rango[0], rango[1]) + ' días laborables en el año lectivo</div>' + tarjetasMeses(rango[0], rango[1], false, true);
+  } else if (v === 'trimestre') {
+    per = S.periodos.filter(function (p) { return p.id === S.periodoId; })[0];
+    if (!per || !per.inicio || !per.fin) h = '<div class="vacio">Define las fechas de los trimestres en ⚙ Configuración.</div>';
+    else h = vistaPeriodo(parse(per.inicio), parse(per.fin), per.nombre);
+  } else if (v === 'periodo') {
+    rango = rangoActual();
+    h = vistaPeriodo(rango[0], rango[1], 'Período seleccionado');
+  } else if (v === 'mes') h = vistaMes();
+  else if (v === 'semana') h = vistaSemana();
+  else h = vistaDia();
+  $('#vista').innerHTML = h;
+  $('#leyenda').innerHTML = leyenda();
+  controles();
+}
+function controles() {
+  var v = S.vista;
+  $$('#tabs button').forEach(function (b) { b.classList.toggle('act', b.dataset.v === v); });
+  $('#cNav').hidden = ['mes', 'semana', 'dia'].indexOf(v) < 0;
+  $('#cTrim').hidden = v !== 'trimestre';
+  $('#cPer').hidden = v !== 'periodo';
+  $('#cFinde').hidden = v === 'dia';
+  $('#cAnioSel').hidden = S.anios.length < 2;
+  $('#selAnio').innerHTML = S.anios.map(function (a) {
+    return '<option value="' + esc(a.id) + '"' + (a.id === S.anioId ? ' selected' : '') + '>' + esc(a.nombre) + '</option>';
+  }).join('');
+  $('#chkFinde').checked = S.finde;
+  $('#bNueva').textContent = enSemanal() ? '＋ Actividad complementaria' : '＋ Actividad';
+  var r = S.ref;
+  $('#etqNav').textContent = v === 'mes' ? MESES[r.getMonth()] + ' ' + r.getFullYear()
+    : v === 'semana' ? fd(lunes(r)) + ' – ' + fd(addDays(lunes(r), 6)) : v === 'dia' ? fdl(r) : '';
+  $('#selTrim').innerHTML = periodosValidos().map(function (p) {
+    return '<option value="' + esc(p.id) + '"' + (p.id === S.periodoId ? ' selected' : '') + '>' + esc(p.nombre) + '</option>';
+  }).join('') || '<option>(sin trimestres definidos)</option>';
+}
+
+/* ============ Eventos de la vista ============ */
+$('#tabs').addEventListener('click', function (e) {
+  var b = e.target.closest('button'); if (!b) return;
+  S.vista = b.dataset.v;
+  if (S.vista === 'periodo' && !$('#pDesde').value) {
+    var a = rangoPorDefecto(); $('#pDesde').value = iso(a[0]); $('#pHasta').value = iso(a[1]);
+  }
+  render();
+});
+function rangoPorDefecto() { var r = S.ref; return [new Date(r.getFullYear(), r.getMonth(), 1), new Date(r.getFullYear(), r.getMonth() + 1, 0)]; }
+function mover(n) {
+  var r = S.ref;
+  if (S.vista === 'mes') S.ref = new Date(r.getFullYear(), r.getMonth() + n, 1);
+  else if (S.vista === 'semana') S.ref = addDays(r, 7 * n);
+  else S.ref = addDays(r, n);
+  render();
+}
+$('#bPrev').onclick = function () { mover(-1); };
+$('#bNext').onclick = function () { mover(1); };
+$('#bHoy').onclick = function () { S.ref = new Date(); render(); };
+$('#selTrim').onchange = function () { S.periodoId = this.value; render(); };
+$('#selAnio').onchange = function () {
+  S.anioId = this.value; S.periodoId = null;
+  var a = anioActual(), v = periodosValidos(), hi = iso(new Date());
+  S.periodoId = ((v.filter(function (p) { return p.inicio <= hi && p.fin >= hi; })[0] || v[0]) || {}).id || null;
+  if (a) S.ref = (a.inicio <= hi && a.fin >= hi) ? new Date() : parse(a.inicio);
+  render();
+};
+$('#pDesde').onchange = $('#pHasta').onchange = render;
+$('#chkFinde').onchange = function () { S.finde = this.checked; render(); };
+$('#selHoja').onchange = ponerHoja;
+function ponerHoja() {
+  var st = $('#estiloHoja') || document.head.appendChild(Object.assign(document.createElement('style'), { id: 'estiloHoja' }));
+  st.textContent = '@page{size:A4 ' + $('#selHoja').value + ';margin:10mm}';
+}
+ponerHoja();
+
+$('#doc').addEventListener('click', function (e) {
+  var el = e.target.closest('[data-id]');
+  if (el) {
+    var id = el.dataset.id, comp = false;
+    var a = S.acts.filter(function (x) { return x.id === id; })[0];
+    if (!a) { a = S.sem.filter(function (x) { return x.id === id; })[0]; comp = true; }
+    if (a) abrirActividad(a, null, comp);
+    return;
+  }
+  var c = e.target.closest('[data-f]');
+  if (c) {
+    if (puedeEditar()) abrirActividad(null, c.dataset.f, enSemanal());
+    else { S.ref = parse(c.dataset.f); S.vista = 'dia'; render(); }
+  }
+});
+
+/* ============ Modales ============ */
+function abrir(id) { $('#' + id).hidden = false; }
+function cerrar(id) { $('#' + id).hidden = true; }
+$$('[data-cerrar]').forEach(function (b) { b.onclick = function () { cerrar(b.dataset.cerrar); }; });
+
+/* ---- Actividad ---- */
+var actEdit = null, modoComp = false;
+function abrirActividad(a, fecha, comp) {
+  actEdit = a; modoComp = !!comp;
+  var editable = (a ? puedeModificar(a) : puedeEditar()) && (modoComp || !enSemanal());
+  $('#mActT').textContent = modoComp ? (a ? 'Actividad complementaria' : 'Nueva actividad complementaria')
+    : (a ? (editable ? 'Editar actividad' : 'Actividad') : 'Nueva actividad');
+  var av = $('#aAviso');
+  if (modoComp) { av.textContent = 'Complementaria: aparece solo en el cronograma semanal de esa semana.'; av.hidden = false; }
+  else if (!editable && puedeEditar() && enSemanal()) { av.textContent = 'Esta actividad viene del cronograma anual/mensual. Para editarla ve a la vista Mes o Anual.'; av.hidden = false; }
+  else if (!editable && puedeEditar()) { av.textContent = 'Solo puedes modificar o eliminar las actividades que tú registraste.'; av.hidden = false; }
+  else av.hidden = true;
+  $('#aTipo').innerHTML = S.tipos.map(function (t) { return '<option value="' + esc(t.id) + '">' + esc(t.nombre) + '</option>'; }).join('');
+  var areas = areasLista();
+  if (a && a.area && areas.indexOf(a.area) < 0) areas.push(a.area);
+  if (S.usuario.area && areas.indexOf(S.usuario.area) < 0) areas.push(S.usuario.area);
+  $('#aArea').innerHTML = '<option value="">(sin área)</option>' + areas.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join('');
+  $('#aTitulo').value = a ? a.titulo : '';
+  $('#aTipo').value = a ? a.tipoId : (S.tipos[0] || {}).id;
+  $('#aArea').value = a ? (a.area || '') : (S.usuario.rol === 'invitado' ? S.usuario.area : '');
+  var ini = a ? a.inicio : (fecha || iso(S.ref));
+  $('#aIni').value = ini;
+  $('#aFin').value = a && a.fin !== a.inicio ? a.fin : '';
+  if (modoComp) { // una complementaria debe quedar dentro de su semana
+    var l = lunes(parse(ini)); $('#aIni').min = $('#aFin').min = iso(l); $('#aIni').max = $('#aFin').max = iso(addDays(l, 6));
+  } else { $('#aIni').removeAttribute('min'); $('#aFin').removeAttribute('min'); $('#aIni').removeAttribute('max'); $('#aFin').removeAttribute('max'); }
+  $('#aResp').value = a ? a.responsable : '';
+  $('#aDesc').value = a ? a.descripcion : '';
+  $('#aDel').hidden = !a || !editable;
+  $$('#fAct input,#fAct select,#fAct textarea').forEach(function (x) { x.disabled = !editable; });
+  if (S.usuario.rol === 'invitado') $('#aArea').disabled = true; // el invitado siempre registra a nombre de su área
+  $('#fAct button[type=submit]').hidden = !editable;
+  abrir('mAct');
+}
+$('#bNueva').onclick = function () { abrirActividad(null, null, enSemanal()); };
+$('#fAct').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  var r = await llamar(modoComp ? 'guardarSemanal' : 'guardarActividad', {
+    id: actEdit ? actEdit.id : null, titulo: $('#aTitulo').value, tipoId: $('#aTipo').value, area: $('#aArea').value,
+    inicio: $('#aIni').value, fin: $('#aFin').value, responsable: $('#aResp').value, descripcion: $('#aDesc').value
+  });
+  if (!r) return;
+  r.fin = r.fin || r.inicio;
+  var lista = modoComp ? S.sem : S.acts;
+  var i = lista.findIndex(function (x) { return x.id === r.id; });
+  if (i >= 0) lista[i] = r; else lista.push(r);
+  cerrar('mAct'); render(); toast(modoComp ? 'Actividad complementaria guardada' : 'Actividad guardada');
+});
+$('#aDel').onclick = async function () {
+  if (!actEdit || !confirm('¿Eliminar esta actividad?')) return;
+  var r = await llamar(modoComp ? 'borrarSemanal' : 'borrarActividad', { id: actEdit.id });
+  if (!r) return;
+  var id = actEdit.id;
+  if (modoComp) S.sem = S.sem.filter(function (x) { return x.id !== id; });
+  else S.acts = S.acts.filter(function (x) { return x.id !== id; });
+  cerrar('mAct'); render(); toast('Actividad eliminada');
+};
+
+/* ---- Configuración ---- */
+var logos = { I: '', D: '' };
+function filaTipo(t) {
+  var d = document.createElement('div'); d.className = 'fila-tipo'; d.dataset.id = t.id || '';
+  d.innerHTML = '<input type="color" value="' + esc(t.color || '#888888') + '"><input placeholder="Nombre" value="' + esc(t.nombre || '') + '">' +
+    '<label><input type="checkbox" style="width:auto"' + (t.sinClases ? ' checked' : '') + '> Sin clases</label><button type="button" class="pel" title="Quitar">✕</button>';
+  d.querySelector('button').onclick = function () { d.remove(); };
+  return d;
+}
+function filaPer(p) {
+  var d = document.createElement('div'); d.className = 'fila-per'; d.dataset.id = p.id || '';
+  d.innerHTML = '<input placeholder="Nombre" value="' + esc(p.nombre || '') + '"><input type="date" value="' + esc(p.inicio || '') + '"><input type="date" value="' + esc(p.fin || '') + '"><button type="button" class="pel" title="Quitar">✕</button>';
+  d.querySelector('button').onclick = function () { d.remove(); };
+  return d;
+}
+function logoPrev() {
+  [['I', 'pLogoI'], ['D', 'pLogoD']].forEach(function (p) {
+    var im = $('#' + p[1]); im.src = logos[p[0]] || ''; im.hidden = !logos[p[0]];
+  });
+}
+// Secciones de la configuración que puede ver/usar quien abre el panel
+function seccionVisible(sec) {
+  if (S.usuario.rol === 'admin') return true;
+  return (sec === 'leyenda' && tienePerm('leyendas')) || (sec === 'periodos' && tienePerm('fechas'));
+}
+function llenarAreas() {
+  $('#dlAreas').innerHTML = $('#cAreas').value.split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean)
+    .map(function (x) { return '<option value="' + esc(x) + '">'; }).join('');
+}
+$('#cAreas').addEventListener('input', llenarAreas);
+$('#bConfig').onclick = function () {
+  var c = S.cfg;
+  $$('#mCfg [data-sec]').forEach(function (el) { el.hidden = !seccionVisible(el.dataset.sec); });
+  $('#cInst').value = c.institucion; $('#cSub').value = c.subtitulo; $('#cReg').value = c.regimen;
+  $('#cColor').value = /^#[0-9a-f]{6}$/i.test(c.color) ? c.color : '#0F5AA6';
+  $('#cPie').value = c.pie;
+  $('#cLema').value = c.lema || ''; $('#cAmie').value = c.amie || ''; $('#cTel').value = c.telefono || '';
+  $('#cDir').value = c.direccion || ''; $('#cCorreo').value = c.correo || '';
+  $('#cAreas').value = c.areas || 'Rectorado\nVicerrectorado'; llenarAreas();
+  logos.I = c.logoIzq || ''; logos.D = c.logoDer || ''; logoPrev();
+  var lt = $('#listaTipos'); lt.innerHTML = ''; S.tipos.forEach(function (t) { lt.appendChild(filaTipo(t)); });
+  var la = $('#listaAnios'); la.innerHTML = '';
+  S.anios.forEach(function (a) { la.appendChild(bloqueAnio(a, S.periodos.filter(function (p) { return p.anioId === a.id; }))); });
+  $('#cCarpeta').value = c.carpetaId ? 'https://drive.google.com/drive/folders/' + c.carpetaId : '';
+  $('#cCarpetaNom').textContent = S.carpetaNombre ? 'Carpeta actual: ' + S.carpetaNombre : 'Sin carpeta definida (se usa la ubicación actual del archivo).';
+  $('#cConsulta').value = c.carpetaConsultaId ? 'https://drive.google.com/drive/folders/' + c.carpetaConsultaId : '';
+  $('#cConsultaNom').textContent = S.consultaNombre ? 'Carpeta actual: ' + S.consultaNombre : 'Sin carpeta definida (se usa la carpeta 1).';
+  var lu = $('#listaUs'); lu.innerHTML = ''; (S.usuarios || []).forEach(function (u) { lu.appendChild(filaUs(u)); });
+  var perm = String(c.permisos || '').split(',');
+  $$('#listaPerm input').forEach(function (x) { x.checked = perm.indexOf(x.value) >= 0; });
+  $('#cMsg').textContent = '';
+  abrir('mCfg');
+};
+$('#addTipo').onclick = function () { $('#listaTipos').appendChild(filaTipo({})); };
+var tmpAnio = 0;
+function bloqueAnio(a, pers) {
+  var b = document.createElement('div'); b.className = 'anio-blk'; b.dataset.id = a.id || ''; b.dataset.tmp = a.id ? '' : 'n' + (++tmpAnio);
+  var admin = S.usuario.rol === 'admin';
+  b.innerHTML = '<div class="anio-cab"><input placeholder="Año lectivo (ej. 2026 - 2027)" value="' + esc(a.nombre || '') + '"' + (admin ? '' : ' disabled') + '>' +
+    '<input type="date" value="' + esc(a.inicio || '') + '"' + (admin ? '' : ' disabled') + '><input type="date" value="' + esc(a.fin || '') + '"' + (admin ? '' : ' disabled') + '>' +
+    '<button type="button" class="pel admin" title="Quitar este año y sus trimestres">✕</button></div>' +
+    '<div class="ayuda">Trimestres / períodos de este año</div><div class="lista-per"></div><button type="button" class="b-addper">＋ Añadir período</button>';
+  var lista = b.querySelector('.lista-per');
+  (pers || []).forEach(function (p) { lista.appendChild(filaPer(p)); });
+  b.querySelector('.b-addper').onclick = function () { lista.appendChild(filaPer({})); };
+  b.querySelector('.anio-cab button').onclick = function () {
+    if (document.querySelectorAll('#listaAnios .anio-blk').length < 2) { toast('Debe quedar al menos un año lectivo', true); return; }
+    if (confirm('¿Quitar este año lectivo y sus trimestres? Las actividades no se borran.')) b.remove();
+  };
+  return b;
+}
+$('#addAnio').onclick = function () { $('#listaAnios').appendChild(bloqueAnio({}, [])); };
+function filaUs(u) {
+  var d = document.createElement('div'); d.className = 'fila-us'; d.dataset.existe = u.usuario ? '1' : '';
+  d.innerHTML = '<input placeholder="usuario" value="' + esc(u.usuario || '') + '"' + (u.usuario ? ' readonly' : '') + ' autocomplete="off">' +
+    '<select><option value="invitado"' + (u.rol === 'lector' ? '' : ' selected') + '>Invitado</option><option value="lector"' + (u.rol === 'lector' ? ' selected' : '') + '>Consulta</option></select>' +
+    '<input list="dlAreas" placeholder="Área (Rectorado…)" value="' + esc(u.area || '') + '" autocomplete="off">' +
+    '<input type="password" placeholder="' + (u.usuario ? 'Nueva clave (opcional)' : 'Clave (mín. 8)') + '" autocomplete="new-password">' +
+    '<button type="button" class="pel" title="Quitar">✕</button>';
+  var sel = d.querySelector('select'), area = d.querySelectorAll('input')[1];
+  var ajustar = function () { area.disabled = sel.value === 'lector'; if (area.disabled) area.value = ''; };
+  sel.onchange = ajustar; ajustar();
+  d.querySelector('button').onclick = function () { d.remove(); };
+  return d;
+}
+$('#addUs').onclick = function () { $('#listaUs').appendChild(filaUs({})); };
+function cargarLogo(inputId, clave) {
+  $('#' + inputId).onchange = function () {
+    var f = this.files[0]; if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        // Se reduce lo necesario para que quepa en una celda de la hoja (límite ~50 000 caracteres), conservando la mejor calidad posible
+        var u = null, lado = 260, c = document.createElement('canvas');
+        while (lado >= 80 && !u) {
+          var k = Math.min(1, lado / Math.max(img.width, img.height));
+          c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k));
+          var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+          var png = c.toDataURL('image/png');
+          if (png.length <= 48000 && /\.png$|\.gif$|\.svg/i.test(f.name)) u = png;
+          else { var jp = c.toDataURL('image/jpeg', 0.85); if (jp.length <= 48000) u = jp; else if (png.length <= 48000) u = png; }
+          lado -= 40;
+        }
+        if (!u) { toast('La imagen es muy compleja; usa una más simple.', true); return; }
+        logos[clave] = u; logoPrev();
+      };
+      img.src = rd.result;
+    };
+    rd.readAsDataURL(f);
+  };
+}
+cargarLogo('fLogoI', 'I'); cargarLogo('fLogoD', 'D');
+$('#qLogoI').onclick = function () { logos.I = ''; logoPrev(); };
+$('#qLogoD').onclick = function () { logos.D = ''; logoPrev(); };
+
+$('#cGuardar').onclick = async function () {
+  var btn = this, msg = $('#cMsg'), admin = S.usuario.rol === 'admin';
+  msg.className = 'msg'; msg.textContent = 'Guardando… (puede tardar unos segundos)';
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  var paquete = {};
+  if (seccionVisible('leyenda')) {
+    paquete.tipos = $$('#listaTipos .fila-tipo').map(function (f) {
+      var i = f.querySelectorAll('input');
+      return { id: f.dataset.id || null, color: i[0].value, nombre: i[1].value, sinClases: i[2].checked };
+    });
+  }
+  if (seccionVisible('periodos')) {
+    var bloques = $$('#listaAnios .anio-blk');
+    paquete.periodos = [];
+    bloques.forEach(function (b) {
+      var aid = b.dataset.id || b.dataset.tmp;
+      b.querySelectorAll('.fila-per').forEach(function (f) {
+        var i = f.querySelectorAll('input');
+        paquete.periodos.push({ id: f.dataset.id || null, nombre: i[0].value, inicio: i[1].value, fin: i[2].value, anioId: aid });
+      });
+    });
+    if (admin) {
+      paquete.anios = bloques.map(function (b) {
+        var i = b.querySelector('.anio-cab').querySelectorAll('input');
+        return { id: b.dataset.id || null, tmp: b.dataset.tmp || '', nombre: i[0].value, inicio: i[1].value, fin: i[2].value };
+      });
+    }
+  }
+  if (admin) {
+    paquete.config = { institucion: $('#cInst').value, subtitulo: $('#cSub').value, regimen: $('#cReg').value,
+                color: $('#cColor').value, pie: $('#cPie').value, areas: $('#cAreas').value,
+                logoIzq: logos.I, logoDer: logos.D, lema: $('#cLema').value, amie: $('#cAmie').value, telefono: $('#cTel').value,
+                direccion: $('#cDir').value, correo: $('#cCorreo').value, carpeta: $('#cCarpeta').value, carpetaConsulta: $('#cConsulta').value,
+                permisos: $$('#listaPerm input').filter(function (x) { return x.checked; }).map(function (x) { return x.value; }) };
+    paquete.usuarios = $$('#listaUs .fila-us').map(function (f) {
+      var i = f.querySelectorAll('input'), rol = f.querySelector('select').value;
+      return { usuario: i[0].value, rol: rol, area: i[1].value, clave: i[2].value };
+    });
+  }
+  try {
+    S.ultimoError = '';
+    if (!(await llamar('guardarTodo', paquete))) {
+      msg.className = 'msg err'; msg.textContent = 'No se guardó: ' + (S.ultimoError || 'error desconocido');
+      return;
+    }
+    var d = await llamar('cargar');
+    if (!d) { msg.className = 'msg err'; msg.textContent = 'Se guardó, pero no se pudo recargar: ' + (S.ultimoError || ''); return; }
+    aplicarDatos(d); cerrar('mCfg'); render(); toast('✔ Configuración guardada');
+  } catch (e) {
+    msg.className = 'msg err'; msg.textContent = 'Error: ' + (e && e.message ? e.message : e);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar configuración';
+  }
+};
+
+/* ---- Respaldos ---- */
+async function listarResp() {
+  var l = await llamar('listarRespaldos'); if (!l) return;
+  $('#listaResp').innerHTML = l.length ? '' : '<div class="vacio">Aún no hay respaldos.</div>';
+  l.forEach(function (r) {
+    var d = document.createElement('div'); d.className = 'resp-item';
+    d.innerHTML = '<span>' + esc(r.nombre) + ' <small style="color:#777">(' + esc(r.fecha) + ')</small></span><button type="button">Restaurar</button>';
+    d.querySelector('button').onclick = async function () {
+      if (!confirm('¿Restaurar ' + r.nombre + '? Se reemplazan los datos actuales (antes se hace un respaldo).')) return;
+      if (!(await llamar('restaurar', { id: r.id }))) return;
+      var dd = await llamar('cargar'); if (dd) { aplicarDatos(dd); render(); }
+      toast('Datos restaurados'); listarResp();
+    };
+    $('#listaResp').appendChild(d);
+  });
+}
+$('#bResp').onclick = function () { abrir('mResp'); listarResp(); };
+$('#rAhora').onclick = async function () { if (await llamar('respaldar')) { toast('Respaldo creado en Drive'); listarResp(); } };
+
+/* ---- Clave ---- */
+$('#bClave').onclick = function () { $('#fClave').reset(); abrir('mClave'); };
+$('#fClave').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  if ($('#kNue').value !== $('#kRep').value) { toast('Las claves nuevas no coinciden', true); return; }
+  if (await llamar('cambiarClave', { actual: $('#kAct').value, nueva: $('#kNue').value })) { cerrar('mClave'); toast('Clave cambiada'); }
+});
+
+/* ============ Actualización automática: ver lo que guardan los demás sin recargar ============ */
+var refrescando = false;
+function hayModalAbierto() { return $$('.modal').some(function (m) { return !m.hidden; }); }
+async function refrescar(aviso) {
+  if (refrescando || !S.token) return;
+  refrescando = true;
+  try {
+    var d = await llamar('cargar');
+    if (d) { aplicarDatos(d); render(); if (aviso) toast(aviso); }
+  } finally { refrescando = false; }
+}
+async function chequearCambios() {
+  if (!S.token || !S.usuario || refrescando || document.hidden || hayModalAbierto()) return;
+  var r = await llamar('version');
+  if (r && r.v !== undefined && String(r.v) !== String(S.ver)) await refrescar('Se actualizaron los datos');
+}
+$('#bActualizar').onclick = function () { refrescar('Datos actualizados'); };
+setInterval(chequearCambios, 30000);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) chequearCambios(); });
+
+/* ============ Exportar / imprimir / guardar copia en Drive ============ */
+var URL_H2C = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+var URL_PDF = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+var libsPromesa = null;
+function cargarScript(src) {
+  return new Promise(function (res, rej) {
+    var s = document.createElement('script'); s.src = src; s.onload = res;
+    s.onerror = function () { rej(new Error('No se pudo cargar ' + src)); };
+    document.head.appendChild(s);
+  });
+}
+function cargarLibs() {
+  if (window.html2canvas && window.jspdf) return Promise.resolve();
+  if (!libsPromesa) libsPromesa = Promise.all([cargarScript(URL_H2C), cargarScript(URL_PDF)]).catch(function (e) { libsPromesa = null; throw e; });
+  return libsPromesa;
+}
+function etiquetaVista() {
+  var v = S.vista, r = S.ref;
+  if (v === 'anual') return 'Anual';
+  if (v === 'trimestre') { var p = S.periodos.filter(function (x) { return x.id === S.periodoId; })[0]; return p ? p.nombre : 'Trimestre'; }
+  if (v === 'periodo') return 'Periodo';
+  if (v === 'mes') return MESES[r.getMonth()] + ' ' + r.getFullYear();
+  return v === 'semana' ? 'Semana' : 'Dia';
+}
+function nombreArchivo() {
+  var r = rangoActual(), h = new Date();
+  var pre = { anual: 'Cronograma anual', trimestre: 'Cronograma trimestral ' + etiquetaVista(), periodo: 'Cronograma periodo',
+              mes: 'Cronograma mensual ' + etiquetaVista(), semana: 'Cronograma semanal', dia: 'Cronograma diario' }[S.vista];
+  return pre + ' ' + iso(r[0]) + (iso(r[0]) !== iso(r[1]) ? ' a ' + iso(r[1]) : '') + ' ' + pad(h.getHours()) + pad(h.getMinutes());
+}
+function descargar(blob, nombre) {
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre;
+  document.body.appendChild(a); a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+function blobB64(blob) {
+  return new Promise(function (res, rej) {
+    var fr = new FileReader(); fr.onload = function () { res(String(fr.result).split(',')[1]); }; fr.onerror = rej; fr.readAsDataURL(blob);
+  });
+}
+var CARPETA_VISTA = { anual: 'Anual', trimestre: 'Trimestral', periodo: 'Periodos', mes: 'Mensual', semana: 'Semanal', dia: 'Diario' };
+// Pregunta si se guarda una copia en Drive. Devuelve 'si', 'no' o 'cancel'. Quien solo consulta no guarda copias.
+function preguntarGuardar(verbo) {
+  return new Promise(function (res) {
+    if (!puedeGuardarCopia()) return res('no');
+    $('#gTxt').textContent = 'Se guardaría en la carpeta de consulta › Cronogramas › ' + CARPETA_VISTA[S.vista] + ' (' + nombreArchivo() + ').';
+    $('#gNo').textContent = 'Solo ' + verbo; $('#gSi').textContent = 'Guardar en Drive y ' + verbo;
+    var fin = function (r) { cerrar('mGuardar'); res(r); };
+    $('#gSi').onclick = function () { fin('si'); }; $('#gNo').onclick = function () { fin('no'); }; $('#gCan').onclick = function () { fin('cancel'); };
+    abrir('mGuardar');
+  });
+}
+async function guardarCopiaDrive(nombre, mime, base64) {
+  var r = await llamar('guardarCopia', { nombre: nombre, mime: mime, base64: base64, vista: S.vista, lunes: S.vista === 'semana' ? iso(lunes(S.ref)) : '' });
+  if (r) toast('Guardado en la carpeta de consulta › Cronogramas › ' + r.carpeta + ': ' + r.nombre + (r.respaldoSemana ? ' · respaldo de la semana actualizado' : ''));
+  return r;
+}
+
+// Genera un PDF A4 de la vista actual; corta las páginas entre bloques para no partir filas ni meses.
+async function generarPDF() {
+  await cargarLibs();
+  var nodo = $('#doc'), escala = 1.5;
+  var canvas = await window.html2canvas(nodo, { scale: escala, backgroundColor: '#ffffff', useCORS: true });
+  var base = nodo.getBoundingClientRect().top, fines = [];
+  nodo.querySelectorAll('.enc,.resumen,.mes,.crono thead,.crono tbody tr,.mtab thead,.mtab tbody tr,.lt tr,.sem-top,.sem-act thead,.sem-act tbody tr,.leyenda,.dia-g').forEach(function (el) {
+    fines.push(Math.round((el.getBoundingClientRect().bottom - base) * escala));
+  });
+  fines.sort(function (a, b) { return a - b; });
+  var pdf = new window.jspdf.jsPDF({ orientation: $('#selHoja').value, unit: 'mm', format: 'a4' });
+  var W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight(), mg = 8;
+  var anchoMm = W - 2 * mg, pxPorMm = canvas.width / anchoMm, altoPag = Math.floor((H - 2 * mg) * pxPorMm);
+  var y = 0, primera = true;
+  while (y < canvas.height) {
+    var limite = y + altoPag, corte;
+    if (limite >= canvas.height) corte = canvas.height;
+    else corte = fines.filter(function (f) { return f > y + 40 && f <= limite; }).pop() || limite;
+    var c = document.createElement('canvas'); c.width = canvas.width; c.height = corte - y;
+    c.getContext('2d').drawImage(canvas, 0, y, canvas.width, corte - y, 0, 0, canvas.width, corte - y);
+    if (!primera) pdf.addPage();
+    primera = false;
+    pdf.addImage(c.toDataURL('image/jpeg', 0.88), 'JPEG', mg, mg, anchoMm, (corte - y) / pxPorMm);
+    y = corte;
+  }
+  return pdf.output('datauristring').split(',')[1];
+}
+
+$('#bPrint').onclick = async function () {
+  var q = await preguntarGuardar('imprimir'); if (q === 'cancel') return;
+  if (q === 'si') {
+    toast('Guardando copia del cronograma en Drive…');
+    try { await guardarCopiaDrive(nombreArchivo() + '.pdf', 'application/pdf', await generarPDF()); }
+    catch (e) { toast('No se pudo guardar la copia en Drive: ' + (e && e.message ? e.message : e), true); }
+  }
+  window.print();
+};
+$('#bExcel').onclick = async function () {
+  var q = await preguntarGuardar('descargar Excel'); if (q === 'cancel') return;
+  var r = rangoActual();
+  var d = await llamar('exportarExcel', { desde: iso(r[0]), hasta: iso(r[1]), nombre: nombreArchivo(), guardar: q === 'si',
+    vista: S.vista, lunes: S.vista === 'semana' ? iso(lunes(S.ref)) : '', semanal: enSemanal(), anio: anioNombre() }); if (!d) return;
+  var bin = atob(d.base64), arr = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  descargar(new Blob([arr], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), d.nombre);
+  if (d.guardado) toast('Guardado en la carpeta de consulta › Cronogramas › ' + d.guardado.carpeta + ': ' + d.guardado.nombre);
+};
+$('#bWord').onclick = async function () {
+  var q = await preguntarGuardar('descargar Word'); if (q === 'cancel') return;
+  var r = rangoActual(), c = S.cfg, ac = /^#[0-9a-f]{6}$/i.test(c.color) ? c.color : '#0F5AA6', conOrigen = enSemanal();
+  var items = conOrigen ? itemsSemana(r[0], r[1]) : actsEntre(r[0], r[1]).map(function (a) { return { a: a, comp: false }; });
+  var h = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>' +
+    'body{font-family:Arial;font-size:10pt}h1{font-size:15pt;text-align:center;margin:0}h2{font-size:12pt;text-align:center;color:' + ac + ';margin:2pt 0}' +
+    'table{border-collapse:collapse;width:100%}th{background:' + ac + ';color:#fff;padding:4pt;border:1pt solid #999}td{border:1pt solid #999;padding:3pt;vertical-align:top}' +
+    '</style></head><body><h1>' + esc(c.institucion) + '</h1><h2>' + esc(c.subtitulo) + ' ' + esc(anioNombre()) + '</h2>' +
+    (c.lema ? '<p style="text-align:center;font-style:italic;margin:0">' + esc(c.lema) + '</p>' : '') + (infoInst() ? '<p style="text-align:center;font-size:9pt;margin:0">' + esc(infoInst()) + '</p>' : '') +
+    '<p style="text-align:center">Período: ' + iso(r[0]) + ' a ' + iso(r[1]) + ' · ' + diasLab(r[0], r[1]) + ' días laborables</p>' +
+    '<table><tr><th>Fecha</th><th>Tipo</th><th>Actividad</th><th>Área / Comisión</th><th>Responsable</th>' + (conOrigen ? '<th>Origen</th>' : '') + '</tr>' +
+    items.map(function (it) {
+      var a = it.a, t = tipoPor[a.tipoId] || { nombre: '', color: '#888' };
+      return '<tr><td>' + rangoLargo(a) + '</td><td style="color:' + t.color + ';font-weight:bold">' + esc(t.nombre) + '</td><td>' + esc(a.titulo) +
+        (a.descripcion ? '<br><i>' + esc(a.descripcion) + '</i>' : '') + '</td><td>' + esc(a.area) + '</td><td>' + esc(a.responsable) + '</td>' +
+        (conOrigen ? '<td>' + (it.comp ? 'Complementaria' : 'Anual / mensual') + '</td>' : '') + '</tr>';
+    }).join('') + '</table><p><b>Leyenda:</b> ' + S.tipos.map(function (t) {
+      return '<span style="color:' + t.color + '">■</span> ' + esc(t.nombre);
+    }).join(' &nbsp; ') + '</p></body></html>';
+  var blob = new Blob(['﻿', h], { type: 'application/msword' }), nombre = nombreArchivo() + '.doc';
+  descargar(blob, nombre);
+  if (q === 'si') await guardarCopiaDrive(nombre, 'application/msword', await blobB64(blob));
+};
+
+/* ============ Arranque ============ */
+(function () {
+  var t = null; try { t = sessionStorage.getItem('cet'); } catch (x) {}
+  if (t) { S.token = t; iniciar().then(function () { if (!S.usuario) salirLocal(); }); }
+})();
+</script>
+</body>
+</html>
