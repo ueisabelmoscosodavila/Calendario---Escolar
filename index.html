@@ -70,7 +70,7 @@ body:not(.perm-excel) #bExcel,body:not(.perm-excel) #bWord{display:none!importan
 .mes{border:1px solid var(--borde);break-inside:avoid}
 .mes-t{background:var(--ac);color:#fff;text-align:center;font-weight:bold;letter-spacing:1px;padding:3px;font-size:13px;text-transform:uppercase}
 .mes-c{display:flex;gap:6px;padding:5px;min-height:118px}
-.mini{border-collapse:collapse;font-size:11px;flex:0 0 auto}
+.mini{border-collapse:collapse;font-size:11px;flex:0 0 auto;align-self:flex-start}
 .mini th{background:var(--gris);padding:1px 4px;font-size:10px}
 .mini td{width:22px;height:17px;text-align:center;border:1px solid #e3e3e3;cursor:pointer}
 .mini td.fds{background:#f1f1f1;color:#777}
@@ -148,7 +148,7 @@ tr.comp td{background:#fffaf0}
 .fila2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .acciones{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 .acciones .izq{margin-right:auto}
-.fila-tipo{display:grid;grid-template-columns:44px 1fr auto 34px;gap:6px;align-items:center;margin-bottom:5px}
+.fila-tipo{display:grid;grid-template-columns:44px 1fr auto 30px 30px 34px;gap:6px;align-items:center;margin-bottom:5px}
 .fila-tipo input[type=color]{padding:0;height:30px}
 .fila-per{display:grid;grid-template-columns:1fr 140px 140px 34px;gap:6px;margin-bottom:5px}
 .fila-ed{display:grid;grid-template-columns:1.3fr 1fr auto 34px;gap:6px;align-items:center;margin-bottom:5px}
@@ -224,6 +224,7 @@ button.ocupado{opacity:.6;cursor:wait}
       <label for="pHasta">Hasta</label><input type="date" id="pHasta">
     </div>
     <label class="ctl" id="cFinde" style="margin:0"><input type="checkbox" id="chkFinde" style="width:auto"> Ver fines de semana</label>
+    <label class="ctl" style="margin:0" title="Mostrar en la leyenda (pantalla e impresión) solo los tipos usados en lo que ves"><input type="checkbox" id="chkLey" style="width:auto" checked> Solo leyendas usadas</label>
     <span class="sep"></span>
     <button id="bNueva" class="pri edita">＋ Actividad</button>
     <select id="selHoja" style="width:auto" title="Orientación al imprimir">
@@ -417,7 +418,7 @@ function cmp(a, b) { return a.inicio < b.inicio ? -1 : a.inicio > b.inicio ? 1 :
 
 /* ============ Estado ============ */
 var S = { token: null, usuario: null, cfg: {}, tipos: [], periodos: [], acts: [], sem: [],
-          vista: 'anual', ref: new Date(), periodoId: null, finde: false };
+          vista: 'anual', ref: new Date(), periodoId: null, finde: false, leySoloUsadas: true };
 var tipoPor = {}, porDia = {};
 
 // Un solo canal con el servidor: dentro de Google usa google.script.run; alojada fuera, hace un POST a la URL /exec (sin cookies).
@@ -546,9 +547,12 @@ function indexar() {
   });
 }
 function colorDe(a) { return (tipoPor[a.tipoId] || { color: '#888' }).color; }
+// Color del día: «Sin clases» gana siempre; después manda el orden de la lista de tipos (Configuración → Leyenda, ↑ ↓).
 function tipoDia(acts) {
   var t = acts.map(function (a) { return tipoPor[a.tipoId]; }).filter(Boolean);
-  return t.filter(function (x) { return x.sinClases; })[0] || t[0] || { color: '#888' };
+  var pos = function (x) { return S.tipos.indexOf(x); };
+  t.sort(function (a, b) { return (b.sinClases ? 1 : 0) - (a.sinClases ? 1 : 0) || pos(a) - pos(b); });
+  return t[0] || { color: '#888' };
 }
 function diasLab(a, b) {
   var n = 0;
@@ -748,8 +752,16 @@ function infoInst() {
   var c = S.cfg;
   return [c.amie ? 'AMIE: ' + c.amie : '', c.direccion, c.telefono ? 'Tel. ' + c.telefono : '', c.correo].filter(Boolean).join(' · ');
 }
+function tiposVisibles() {
+  if (!S.leySoloUsadas) return S.tipos;
+  var rg = rangoActual(), A = iso(rg[0]), B = iso(rg[1]), usados = {};
+  S.acts.concat(S.sem).forEach(function (x) { if (x.inicio <= B && x.fin >= A) usados[x.tipoId] = 1; });
+  return S.tipos.filter(function (t) { return usados[t.id]; });
+}
 function leyenda() {
-  return '<div class="leyenda"><b>Leyenda:</b>' + S.tipos.map(function (t) {
+  var vis = tiposVisibles();
+  if (!vis.length) return S.cfg.pie ? '<div class="pie">' + esc(S.cfg.pie) + '</div>' : '';
+  return '<div class="leyenda"><b>Leyenda:</b>' + vis.map(function (t) {
     return '<span><i style="background:' + t.color + '"></i>' + esc(t.nombre) + '</span>';
   }).join('') + '</div>' + (S.cfg.pie ? '<div class="pie">' + esc(S.cfg.pie) + '</div>' : '');
 }
@@ -786,7 +798,7 @@ function controles() {
   $('#selAnio').innerHTML = S.anios.map(function (a) {
     return '<option value="' + esc(a.id) + '"' + (a.id === S.anioId ? ' selected' : '') + '>' + esc(a.nombre) + '</option>';
   }).join('');
-  $('#chkFinde').checked = S.finde;
+  $('#chkFinde').checked = S.finde; $('#chkLey').checked = S.leySoloUsadas;
   $('#bNueva').textContent = enSemanal() ? '＋ Actividad complementaria' : '＋ Actividad';
   var r = S.ref;
   $('#etqNav').textContent = v === 'mes' ? MESES[r.getMonth()] + ' ' + r.getFullYear()
@@ -826,6 +838,7 @@ $('#selAnio').onchange = function () {
 };
 $('#pDesde').onchange = $('#pHasta').onchange = render;
 $('#chkFinde').onchange = function () { S.finde = this.checked; render(); };
+$('#chkLey').onchange = function () { S.leySoloUsadas = this.checked; render(); };
 $('#selHoja').onchange = ponerHoja;
 function ponerHoja() {
   var st = $('#estiloHoja') || document.head.appendChild(Object.assign(document.createElement('style'), { id: 'estiloHoja' }));
@@ -923,8 +936,11 @@ var logos = { I: '', D: '' };
 function filaTipo(t) {
   var d = document.createElement('div'); d.className = 'fila-tipo'; d.dataset.id = t.id || '';
   d.innerHTML = '<input type="color" value="' + esc(t.color || '#888888') + '"><input placeholder="Nombre" value="' + esc(t.nombre || '') + '">' +
-    '<label><input type="checkbox" style="width:auto"' + (t.sinClases ? ' checked' : '') + '> Sin clases</label><button type="button" class="pel" title="Quitar">✕</button>';
-  d.querySelector('button').onclick = function () { d.remove(); };
+    '<label><input type="checkbox" style="width:auto"' + (t.sinClases ? ' checked' : '') + '> Sin clases</label>' +
+    '<button type="button" class="pel up" title="Subir prioridad">↑</button><button type="button" class="pel dn2" title="Bajar prioridad">↓</button><button type="button" class="pel" title="Quitar">✕</button>';
+  d.querySelector('.up').onclick = function () { var p = d.previousElementSibling; if (p) d.parentNode.insertBefore(d, p); };
+  d.querySelector('.dn2').onclick = function () { var n = d.nextElementSibling; if (n) d.parentNode.insertBefore(n, d); };
+  d.querySelector('.pel:not(.up):not(.dn2)').onclick = function () { d.remove(); };
   return d;
 }
 function filaPer(p) {
@@ -1259,7 +1275,7 @@ $('#bWord').onclick = async function () {
       return '<tr><td>' + rangoLargo(a) + '</td><td style="color:' + t.color + ';font-weight:bold">' + esc(t.nombre) + '</td><td>' + esc(a.titulo) +
         (a.descripcion ? '<br><i>' + esc(a.descripcion) + '</i>' : '') + '</td><td>' + esc(a.area) + '</td><td>' + esc(a.responsable) + '</td>' +
         (conOrigen ? '<td>' + (it.comp ? 'Complementaria' : 'Anual / mensual') + '</td>' : '') + '</tr>';
-    }).join('') + '</table><p><b>Leyenda:</b> ' + S.tipos.map(function (t) {
+    }).join('') + '</table><p><b>Leyenda:</b> ' + tiposVisibles().map(function (t) {
       return '<span style="color:' + t.color + '">■</span> ' + esc(t.nombre);
     }).join(' &nbsp; ') + '</p></body></html>';
   var blob = new Blob(['﻿', h], { type: 'application/msword' }), nombre = nombreArchivo() + '.doc';
