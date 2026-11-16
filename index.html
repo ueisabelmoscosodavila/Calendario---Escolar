@@ -134,6 +134,11 @@ tr.comp td{background:#fffaf0}
 .lt td.d{width:150px;font-weight:bold;background:#fafafa}
 .lt .a{display:block;margin-bottom:3px;cursor:pointer}
 .dia-g h3{margin:6px 0;color:var(--ac)}
+.sem-act + .sem-top{margin-top:14px}
+/* nota destacada del día */
+.nota-dia{display:block;background:#fff176;border:1px solid #f0c800;border-left:5px solid #e0a800;color:#3d3000;font-weight:bold;padding:4px 6px;margin-bottom:5px;white-space:pre-wrap;border-radius:3px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.nota-dia.ed{cursor:pointer}
+.nota-add{font-size:11px;padding:1px 6px;margin-bottom:4px;cursor:pointer}
 
 /* leyenda */
 .leyenda{margin-top:12px;border-top:1px solid var(--borde);padding-top:6px;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;align-items:center}
@@ -264,6 +269,21 @@ button.ocupado{opacity:.6;cursor:wait}
   </form>
 </div>
 
+<!-- MODAL NOTA DEL DÍA -->
+<div class="modal" id="mNota" hidden>
+  <form class="caja" id="fNota">
+    <h3>Nota destacada del día</h3>
+    <p class="ayuda" id="nFecha" style="font-weight:bold;font-size:13px"></p>
+    <label for="nTexto">Texto (se muestra resaltado en la vista semanal y diaria)</label>
+    <textarea id="nTexto" rows="4" maxlength="600"></textarea>
+    <div class="ayuda">Si dejas el texto vacío y guardas, la nota de ese día se quita.</div>
+    <div class="acciones">
+      <button type="button" data-cerrar="mNota">Cerrar</button>
+      <button type="submit" class="pri">Guardar</button>
+    </div>
+  </form>
+</div>
+
 <!-- MODAL CONFIGURACIÓN -->
 <div class="modal" id="mCfg" hidden>
   <div class="caja ancha">
@@ -320,6 +340,7 @@ button.ocupado{opacity:.6;cursor:wait}
       <label><input type="checkbox" value="excel">Exportar a Excel y Word</label>
       <label><input type="checkbox" value="leyendas">Cambiar la leyenda (tipos y colores)</label>
       <label><input type="checkbox" value="fechas">Cambiar las fechas de trimestres / períodos</label>
+      <label><input type="checkbox" value="notasdia">Escribir la nota destacada de cada día (vista semanal)</label>
     </div>
     </div>
 
@@ -436,7 +457,7 @@ function rpc(token, accion, datos) {
   });
 }
 /* Barra de progreso global + sincronización en segundo plano */
-var ocupados = 0, ESCRIBEN = ['guardarActividad','borrarActividad','guardarSemanal','borrarSemanal','guardarTipos','guardarPeriodos','guardarTodo','restaurar'];
+var ocupados = 0, ESCRIBEN = ['guardarActividad','borrarActividad','guardarSemanal','borrarSemanal','guardarTipos','guardarPeriodos','guardarTodo','restaurar','guardarNotaDia'];
 function progreso(on) {
   ocupados += on ? 1 : -1; if (ocupados < 0) ocupados = 0;
   var p = $('#progreso'); if (p) p.className = ocupados > 0 ? 'on' : '';
@@ -502,6 +523,7 @@ function aplicarDatos(d) {
   S.tipos = d.tipos.map(function (t) { return { id: t.id, nombre: t.nombre, color: t.color, sinClases: t.sinClases === 'SI' || t.sinClases === true }; });
   S.acts = d.actividades.map(function (a) { a.fin = a.fin || a.inicio; return a; });
   S.sem = (d.semanal || []).map(function (a) { a.fin = a.fin || a.inicio; return a; });
+  S.notas = {}; (d.notasDia || []).forEach(function (n) { S.notas[n.fecha] = n.texto; });
   document.body.className = 'rol-' + S.usuario.rol + (tienePerm('excel') ? ' perm-excel' : '');
   $('#bConfig').hidden = !(tienePerm('leyendas') || tienePerm('fechas') || S.usuario.rol === 'admin');
   document.documentElement.style.setProperty('--ac', /^#[0-9a-f]{6}$/i.test(S.cfg.color) ? S.cfg.color : '#0F5AA6');
@@ -522,6 +544,8 @@ function aplicarDatos(d) {
 function tienePerm(p) { return (S.permisos || []).indexOf(p) >= 0; }
 // Crear actividades: administrador e invitados. Modificar/eliminar: el administrador; el invitado solo las que él registró.
 function puedeEditar() { return S.usuario.rol === 'admin' || S.usuario.rol === 'invitado'; }
+// Nota destacada del día: administrador o quien tenga el permiso «notasdia»
+function puedeNotas() { return S.usuario.rol === 'admin' || tienePerm('notasdia'); }
 function puedeModificar(a) {
   if (S.usuario.rol === 'admin') return true;
   return S.usuario.rol === 'invitado' && !!a.propia;
@@ -705,15 +729,33 @@ function bloqueItems(items) {
       (it.comp ? '<span class="comp-b">Complementaria</span>' : '') + '</span>';
   }).join('');
 }
+// Nota destacada de un día (resaltada). Con permiso se puede editar; sin permiso solo se ve.
+function notaDiaHtml(f) {
+  var t = (S.notas || {})[f], ed = puedeNotas();
+  if (t) return '<span class="nota-dia' + (ed ? ' ed' : '') + '"' + (ed ? ' data-nota="' + f + '" title="Editar la nota del día"' : '') + '>' + esc(t) + '</span>';
+  return ed ? '<button type="button" class="nota-add noprint" data-nota="' + f + '" data-html2canvas-ignore="true">✎ Nota del día</button>' : '';
+}
 function vistaSemana() {
   var l = lunes(S.ref), n = S.finde ? 7 : 5, fin = addDays(l, n - 1);
   var h = '<div class="resumen"><b>Cronograma semanal · semana del ' + fd(l) + ' al ' + fd(fin) + '</b> · ' + diasLab(l, addDays(l, 4)) + ' días laborables</div>';
-  // Parte superior: días y observaciones
+  // Primero: actividades (del anual/mensual + complementarias) y, a la derecha, responsables.
+  // No se muestra quién (qué área/usuario) las ingresó: eso queda solo en la auditoría.
+  var items = itemsSemana(l, fin);
+  h += '<table class="sem-act"><thead><tr><th>Fecha</th><th>Actividades</th><th>Responsables</th></tr></thead><tbody>';
+  if (!items.length) h += '<tr><td colspan="3" style="color:#999">Sin actividades esta semana</td></tr>';
+  items.forEach(function (it) {
+    var a = it.a, t = tipoPor[a.tipoId] || { nombre: '' };
+    h += '<tr' + (it.comp ? ' class="comp"' : '') + ' data-id="' + esc(a.id) + '"><td class="f">' + rangoLargo(a) + '</td><td><i style="background:' + colorDe(a) + '"></i><b>' + esc(a.titulo) +
+      '</b> <small style="color:#666">[' + esc(t.nombre) + ']</small>' + (it.comp ? '<span class="comp-b">Complementaria</span>' : '') +
+      '</td><td class="r">' + esc(a.responsable) + '</td></tr>';
+  });
+  h += '</tbody></table>';
+  // Después: días y observaciones (con la nota destacada de cada día arriba, resaltada)
   h += '<table class="sem-top"><thead><tr><th class="lab">Días</th>';
   for (var i = 0; i < n; i++) { var d = addDays(l, i); h += '<th data-f="' + iso(d) + '">' + DIASL[i] + '<br>' + d.getDate() + ' ' + MESC[d.getMonth()] + '</th>'; }
   h += '</tr></thead><tbody><tr><td class="lab">Observaciones</td>';
   for (i = 0; i < n; i++) {
-    var dia = addDays(l, i), obs = '';
+    var dia = addDays(l, i), obs = notaDiaHtml(iso(dia));
     itemsSemana(dia, dia).forEach(function (it) {
       var a = it.a, t = tipoPor[a.tipoId] || { nombre: '', color: '#888', sinClases: false };
       if (t.sinClases || a.descripcion) {
@@ -723,23 +765,12 @@ function vistaSemana() {
     h += '<td data-f="' + iso(dia) + '">' + obs + '</td>';
   }
   h += '</tr></tbody></table>';
-  // Debajo: actividades (del anual/mensual + complementarias) y, a la derecha, responsables
-  var items = itemsSemana(l, fin);
-  h += '<table class="sem-act"><thead><tr><th>Fecha</th><th>Actividades</th><th>Responsables</th></tr></thead><tbody>';
-  if (!items.length) h += '<tr><td colspan="3" style="color:#999">Sin actividades esta semana</td></tr>';
-  items.forEach(function (it) {
-    var a = it.a, t = tipoPor[a.tipoId] || { nombre: '' };
-    h += '<tr' + (it.comp ? ' class="comp"' : '') + ' data-id="' + esc(a.id) + '"><td class="f">' + rangoLargo(a) + '</td><td><i style="background:' + colorDe(a) + '"></i><b>' + esc(a.titulo) +
-      '</b> <small style="color:#666">[' + esc(t.nombre) + ']</small>' + tagArea(a) + (it.comp ? '<span class="comp-b">Complementaria</span>' : '') +
-      '</td><td class="r">' + esc(a.responsable) + '</td></tr>';
-  });
-  h += '</tbody></table>';
-  if (puedeEditar()) h += '<p class="nota" data-html2canvas-ignore="true">Las actividades sin la etiqueta «Complementaria» vienen del cronograma anual/mensual y se editan allí. Aquí puedes añadir actividades complementarias solo para esta semana (botón superior o clic en un día).</p>';
+  if (puedeEditar()) h += '<p class="nota" data-html2canvas-ignore="true">Las actividades sin la etiqueta «Complementaria» vienen del cronograma anual/mensual y se editan allí. Aquí puedes añadir actividades complementarias solo para esta semana (botón superior o clic en un día).' + (puedeNotas() ? ' La «Nota del día» resaltada se escribe en la fila Observaciones de cada día.' : '') + '</p>';
   return h;
 }
 function vistaDia() {
   var d = S.ref;
-  return '<div class="dia-g"><h3>' + fdl(d) + '</h3>' + bloqueItems(itemsSemana(d, d)) + '</div>';
+  return '<div class="dia-g"><h3>' + fdl(d) + '</h3>' + notaDiaHtml(iso(d)) + bloqueItems(itemsSemana(d, d)) + '</div>';
 }
 function encabezado() {
   var c = S.cfg, logo = function (u) { return u ? '<img src="' + esc(u) + '" alt="">' : '<span></span>'; };
@@ -847,6 +878,8 @@ function ponerHoja() {
 ponerHoja();
 
 $('#doc').addEventListener('click', function (e) {
+  var nt = e.target.closest('[data-nota]');
+  if (nt) { abrirNota(nt.dataset.nota); return; }
   var el = e.target.closest('[data-id]');
   if (el) {
     var id = el.dataset.id, comp = false;
@@ -930,6 +963,28 @@ $('#aDel').onclick = async function () {
     cerrar('mAct'); render(); toast('Actividad eliminada');
   });
 };
+
+/* ---- Nota destacada del día ---- */
+var notaFecha = null;
+function abrirNota(f) {
+  if (!puedeNotas()) return;
+  notaFecha = f;
+  var d = parse(f);
+  $('#nFecha').textContent = (DIASL[(d.getDay() + 6) % 7] + ' ' + d.getDate() + ' ' + MESES[d.getMonth()] + ' DEL ' + d.getFullYear()).toUpperCase();
+  $('#nTexto').value = (S.notas || {})[f] || '';
+  abrir('mNota'); $('#nTexto').focus();
+}
+$('#fNota').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  var bt = $('#fNota button[type=submit]');
+  await unaVez(bt, 'Guardando…', async function () {
+    var r = await llamar('guardarNotaDia', { fecha: notaFecha, texto: $('#nTexto').value });
+    if (!r) return;
+    S.notas = S.notas || {};
+    if (r.texto) S.notas[r.fecha] = r.texto; else delete S.notas[r.fecha];
+    cerrar('mNota'); render(); toast(r.texto ? 'Nota del día guardada' : 'Nota del día quitada');
+  });
+});
 
 /* ---- Configuración ---- */
 var logos = { I: '', D: '' };
