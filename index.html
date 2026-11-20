@@ -137,7 +137,7 @@ tr.comp td{background:#fffaf0}
 .sem-act + .sem-top{margin-top:14px}
 
 /* semana · formato oficial (como el cronograma impreso de la institución) */
-.of-tit{font-family:"Times New Roman",Times,serif;font-weight:bold;font-size:13px;margin:6px 0 10px;line-height:1.35}
+.of-tit{font-family:"Times New Roman",Times,serif;font-weight:bold;font-size:14px;text-align:center;margin:6px 0 10px;line-height:1.4}
 .of-dia{break-inside:avoid-page;margin-bottom:16px}
 .of-dia h4{display:inline-block;margin:0 0 5px;padding:1px 4px;background:#00e5ff;border:0;font-family:"Times New Roman",Times,serif;font-size:12px;font-weight:bold;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .of-nota{font-family:"Times New Roman",Times,serif;font-weight:bold;font-size:12px;margin:2px 0 5px 8px;white-space:pre-wrap}
@@ -152,6 +152,13 @@ tr.comp td{background:#fffaf0}
 .of-tab .fer{background:#ffff00;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .of-tab .det{display:block;margin-top:2px}
 .of-vacio td{height:34px}
+.pie-sem{margin-top:14px;text-align:center;font-family:"Times New Roman",Times,serif;break-inside:avoid-page}
+.pie-sem .av{font-weight:bold;font-size:12px;text-transform:uppercase}
+.pie-sem .fr{font-weight:bold;font-style:italic;font-size:13px;margin:8px 0}
+.pie-sem .fi{font-weight:bold;font-size:12px;text-transform:uppercase}
+.of-tab .tit{font-weight:bold}
+.of-tab .tit i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.of-tab .det{margin-left:22px;color:#000;font-weight:normal}
 /* nota destacada del día */
 .nota-dia{display:block;background:#fff176;border:1px solid #f0c800;border-left:5px solid #e0a800;color:#3d3000;font-weight:bold;padding:4px 6px;margin-bottom:5px;white-space:pre-wrap;border-radius:3px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .nota-dia.ed{cursor:pointer}
@@ -750,6 +757,23 @@ function bloqueItems(items) {
       (it.comp ? '<span class="comp-b">Complementaria</span>' : '') + '</span>';
   }).join('');
 }
+/* ---- Pie de los cronogramas semanales ---- */
+var FRASES_EQUIPO = [
+  'El talento gana partidos, pero el trabajo en equipo gana campeonatos.',
+  'Juntos llegamos más lejos: cada aporte suma para lograr los objetivos de todos.',
+  'Si trabajamos unidos, lo difícil se vuelve posible.',
+  'Un equipo comprometido convierte los desafíos en oportunidades.',
+  'Solos podemos hacer poco; en equipo podemos hacer mucho.',
+  'El éxito de la institución se construye con el esfuerzo de cada uno.',
+  'Cuando cada quien da lo mejor, el equipo da lo extraordinario.',
+  'Trabajar en equipo es comenzar juntos, avanzar juntos y triunfar juntos.'
+];
+// La frase cambia cada semana (según el número de semana) y es la misma al volver a ver o imprimir esa semana.
+function pieSemana() {
+  var n = numSemana(lunes(S.ref)), i = ((n % FRASES_EQUIPO.length) + FRASES_EQUIPO.length) % FRASES_EQUIPO.length;
+  return '<div class="pie-sem"><div class="av">Las actividades pueden ser modificadas de acuerdo a los imprevistos que se presentaren, por favor estar atentos.</div>' +
+    '<div class="fr">• ' + esc(FRASES_EQUIPO[i]) + ' •</div><div class="fi">Atentamente,<br>Equipo Administrativo</div></div>';
+}
 /* ---- Semana · formato oficial ---- */
 var INI_SEMANAS_DEF = '2026-08-10'; // lunes de la semana N° 1 si el administrador no definió otro
 function numSemana(l) {
@@ -773,13 +797,13 @@ function vistaSemanaOficial() {
     h += '<table class="of-tab"><thead><tr><th>ACTIVIDAD</th><th class="r">RESPONSABLES</th></tr></thead><tbody>';
     if (!items.length) h += '<tr class="of-vacio"><td class="a" data-f="' + f + '">Sin actividades</td><td class="r"></td></tr>';
     items.forEach(function (it) {
-      var a = it.a, t = tipoPor[a.tipoId] || { sinClases: false }, tit = esc(a.titulo);
-      h += '<tr data-id="' + esc(a.id) + '"><td class="a">' + (t.sinClases ? '<span class="fer">' + tit + '</span>' : tit) +
+      var a = it.a, t = tipoPor[a.tipoId] || { sinClases: false }, tit = esc(a.titulo), col = colorDe(a);
+      h += '<tr data-id="' + esc(a.id) + '"><td class="a"><span class="tit" style="color:' + col + '"><i style="background:' + col + '"></i>' + (t.sinClases ? '<span class="fer" style="color:#000">' + tit + '</span>' : tit) + '</span>' +
         (a.descripcion ? '<span class="det">' + esc(a.descripcion) + '</span>' : '') + '</td><td class="r">' + esc(a.responsable) + '</td></tr>';
     });
     h += '</tbody></table></div>';
   }
-  if (puedeEditar()) h += '<p class="nota" data-html2canvas-ignore="true">Las actividades que no son «Complementarias» vienen del cronograma anual/mensual y se editan allí. Para añadir una solo a esta semana usa el botón superior.</p>';
+  if (puedeEditar()) h += '<p class="nota noprint" data-html2canvas-ignore="true">Las actividades que no son «Complementarias» vienen del cronograma anual/mensual y se editan allí. Para añadir una solo a esta semana usa el botón superior.</p>';
   return h;
 }
 // Nota destacada de un día (resaltada). Con permiso se puede editar; sin permiso solo se ve.
@@ -819,7 +843,7 @@ function vistaSemana() {
     h += '<td data-f="' + iso(dia) + '">' + obs + '</td>';
   }
   h += '</tr></tbody></table>';
-  if (puedeEditar()) h += '<p class="nota" data-html2canvas-ignore="true">Las actividades sin la etiqueta «Complementaria» vienen del cronograma anual/mensual y se editan allí. Aquí puedes añadir actividades complementarias solo para esta semana (botón superior o clic en un día).' + (puedeNotas() ? ' La «Nota del día» resaltada se escribe en la fila Observaciones de cada día.' : '') + '</p>';
+  if (puedeEditar()) h += '<p class="nota noprint" data-html2canvas-ignore="true">Las actividades sin la etiqueta «Complementaria» vienen del cronograma anual/mensual y se editan allí. Aquí puedes añadir actividades complementarias solo para esta semana (botón superior o clic en un día).' + (puedeNotas() ? ' La «Nota del día» resaltada se escribe en la fila Observaciones de cada día.' : '') + '</p>';
   return h;
 }
 function vistaDia() {
@@ -869,7 +893,7 @@ function render() {
   else if (v === 'semana') h = vistaSemana();
   else h = vistaDia();
   $('#vista').innerHTML = h;
-  $('#leyenda').innerHTML = leyenda();
+  $('#leyenda').innerHTML = leyenda() + (v === 'semana' ? pieSemana() : '');
   controles();
 }
 function controles() {
@@ -1329,7 +1353,7 @@ async function generarPDF() {
   var nodo = $('#doc'), escala = 1.5;
   var canvas = await window.html2canvas(nodo, { scale: escala, backgroundColor: '#ffffff', useCORS: true });
   var base = nodo.getBoundingClientRect().top, fines = [];
-  nodo.querySelectorAll('.enc,.resumen,.mes,.crono thead,.crono tbody tr,.mtab thead,.mtab tbody tr,.lt tr,.sem-top,.sem-act thead,.sem-act tbody tr,.of-tab tbody tr,.of-dia,.leyenda,.dia-g').forEach(function (el) {
+  nodo.querySelectorAll('.enc,.resumen,.mes,.crono thead,.crono tbody tr,.mtab thead,.mtab tbody tr,.lt tr,.sem-top,.sem-act thead,.sem-act tbody tr,.of-tab tbody tr,.of-dia,.leyenda,.pie-sem,.dia-g').forEach(function (el) {
     fines.push(Math.round((el.getBoundingClientRect().bottom - base) * escala));
   });
   fines.sort(function (a, b) { return a - b; });
