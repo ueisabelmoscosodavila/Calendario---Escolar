@@ -137,7 +137,7 @@ tr.comp td{background:#fffaf0}
 .sem-act + .sem-top{margin-top:14px}
 
 /* semana · formato oficial (como el cronograma impreso de la institución) */
-.of-tit{font-family:"Times New Roman",Times,serif;font-weight:bold;font-size:14px;text-align:center;margin:6px 0 10px;line-height:1.4}
+.of-tit{font-family:"Times New Roman",Times,serif;font-weight:bold;font-size:14pt;text-align:center;margin:6px 0 10px;line-height:1.4}
 .of-dia{break-inside:avoid-page;margin-bottom:16px}
 .of-dia h4{display:inline-block;margin:0 0 5px;padding:1px 4px;background:#00e5ff;border:0;font-family:"Times New Roman",Times,serif;font-size:12px;font-weight:bold;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .of-nota{font-family:"Times New Roman",Times,serif;font-weight:bold;font-size:12px;margin:2px 0 5px 8px;white-space:pre-wrap}
@@ -156,7 +156,7 @@ tr.comp td{background:#fffaf0}
 .pie-sem .av{font-weight:bold;font-size:12px;text-transform:uppercase}
 .pie-sem .fr{font-weight:bold;font-style:italic;font-size:13px;margin:8px 0}
 .pie-sem .fi{font-weight:bold;font-size:12px;text-transform:uppercase}
-.of-tab .tit{font-weight:bold}
+.of-tab .tit{font-weight:bold;color:#000}
 .of-tab .tit i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .of-tab .det{margin-left:22px;color:#000;font-weight:normal}
 /* nota destacada del día */
@@ -165,7 +165,7 @@ tr.comp td{background:#fffaf0}
 .nota-add{font-size:11px;padding:1px 6px;margin-bottom:4px;cursor:pointer}
 
 /* leyenda */
-.leyenda{margin-top:12px;border-top:1px solid var(--borde);padding-top:6px;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;align-items:center}
+.leyenda{margin-top:12px;border-top:1px solid var(--borde);padding-top:6px;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:8pt;align-items:center}
 .leyenda span i{display:inline-block;width:14px;height:14px;vertical-align:middle;margin-right:4px;border-radius:2px}
 .pie{font-size:11px;color:#555;margin-top:6px}
 
@@ -196,7 +196,7 @@ h4{margin:16px 0 4px;border-bottom:1px solid var(--borde);padding-bottom:3px}
 button.ocupado{opacity:.6;cursor:wait}
 
 @media print{
-  .noprint,.barra,.controles,.modal,#toast{display:none!important}
+  .noprint,.nota,.barra,.controles,.modal,#toast{display:none!important}
   body{background:#fff}
   #doc{margin:0;box-shadow:none;max-width:none;padding:0}
   .mtab td{height:80px}
@@ -798,7 +798,7 @@ function vistaSemanaOficial() {
     if (!items.length) h += '<tr class="of-vacio"><td class="a" data-f="' + f + '">Sin actividades</td><td class="r"></td></tr>';
     items.forEach(function (it) {
       var a = it.a, t = tipoPor[a.tipoId] || { sinClases: false }, tit = esc(a.titulo), col = colorDe(a);
-      h += '<tr data-id="' + esc(a.id) + '"><td class="a"><span class="tit" style="color:' + col + '"><i style="background:' + col + '"></i>' + (t.sinClases ? '<span class="fer" style="color:#000">' + tit + '</span>' : tit) + '</span>' +
+      h += '<tr data-id="' + esc(a.id) + '"><td class="a"><span class="tit"><i style="background:' + col + '"></i>' + (t.sinClases ? '<span class="fer" style="color:#000">' + tit + '</span>' : tit) + '</span>' +
         (a.descripcion ? '<span class="det">' + esc(a.descripcion) + '</span>' : '') + '</td><td class="r">' + esc(a.responsable) + '</td></tr>';
     });
     h += '</tbody></table></div>';
