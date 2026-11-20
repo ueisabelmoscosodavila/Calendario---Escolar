@@ -135,6 +135,23 @@ tr.comp td{background:#fffaf0}
 .lt .a{display:block;margin-bottom:3px;cursor:pointer}
 .dia-g h3{margin:6px 0;color:var(--ac)}
 .sem-act + .sem-top{margin-top:14px}
+
+/* semana · formato oficial (como el cronograma impreso de la institución) */
+.of-tit{font-family:"Times New Roman",Times,serif;font-weight:bold;font-size:13px;margin:6px 0 10px;line-height:1.35}
+.of-dia{break-inside:avoid-page;margin-bottom:16px}
+.of-dia h4{display:inline-block;margin:0 0 5px;padding:1px 4px;background:#00e5ff;border:0;font-family:"Times New Roman",Times,serif;font-size:12px;font-weight:bold;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.of-nota{font-family:"Times New Roman",Times,serif;font-weight:bold;font-size:12px;margin:2px 0 5px 8px;white-space:pre-wrap}
+.of-nota.ed,.of-dia h4[data-f]{cursor:pointer}
+.of-tab{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid #333;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.of-tab th{background:#4472c4;color:#000;font-family:"Times New Roman",Times,serif;font-size:11px;padding:2px 4px;border:1px solid #333}
+.of-tab th.r,.of-tab td.r{width:26%}
+.of-tab td{vertical-align:top;font-size:11.5px;padding:3px 5px 10px;border-left:1px solid #333;border-right:1px solid #333}
+.of-tab td.a{background:#d9d9d9;white-space:pre-line;text-align:justify}
+.of-tab td.r{background:#8faadc;font-family:"Times New Roman",Times,serif;font-weight:bold;font-size:11px}
+.of-tab tr[data-id]{cursor:pointer}
+.of-tab .fer{background:#ffff00;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.of-tab .det{display:block;margin-top:2px}
+.of-vacio td{height:34px}
 /* nota destacada del día */
 .nota-dia{display:block;background:#fff176;border:1px solid #f0c800;border-left:5px solid #e0a800;color:#3d3000;font-weight:bold;padding:4px 6px;margin-bottom:5px;white-space:pre-wrap;border-radius:3px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .nota-dia.ed{cursor:pointer}
@@ -228,6 +245,7 @@ button.ocupado{opacity:.6;cursor:wait}
       <label for="pDesde">Desde</label><input type="date" id="pDesde">
       <label for="pHasta">Hasta</label><input type="date" id="pHasta">
     </div>
+    <div class="ctl" id="cFmtSem"><label for="selFmtSem">Formato</label><select id="selFmtSem"><option value="oficial">Formato oficial</option><option value="tabla">Tabla</option></select></div>
     <label class="ctl" id="cFinde" style="margin:0"><input type="checkbox" id="chkFinde" style="width:auto"> Ver fines de semana</label>
     <label class="ctl" style="margin:0" title="Mostrar en la leyenda (pantalla e impresión) solo los tipos usados en lo que ves"><input type="checkbox" id="chkLey" style="width:auto" checked> Solo leyendas usadas</label>
     <span class="sep"></span>
@@ -313,6 +331,8 @@ button.ocupado{opacity:.6;cursor:wait}
       <div><label for="cCorreo">Correo institucional (opcional)</label><input id="cCorreo" maxlength="200"></div>
     </div>
     <div class="ayuda">Los logos y estos datos salen en el encabezado de todos los cronogramas (pantalla, PDF, Excel y Word). Usa logos con fondo transparente o blanco.</div>
+    <label for="cIniSem">Lunes de la semana N° 1 (para numerar los cronogramas semanales)</label><input type="date" id="cIniSem">
+    <div class="ayuda">Ejemplo: si la semana del 23 al 27 de noviembre de 2026 es la N° 16, aquí va el lunes 10 de agosto de 2026. Si lo dejas vacío se usa esa fecha.</div>
     <label for="cPie">Texto al pie (opcional)</label><input id="cPie">
     <label for="cAreas">Áreas / comisiones (una por línea: Rectorado, Vicerrectorado, DECE, Inspección, Secretaría…)</label><textarea id="cAreas" rows="5"></textarea>
     </div>
@@ -439,7 +459,8 @@ function cmp(a, b) { return a.inicio < b.inicio ? -1 : a.inicio > b.inicio ? 1 :
 
 /* ============ Estado ============ */
 var S = { token: null, usuario: null, cfg: {}, tipos: [], periodos: [], acts: [], sem: [],
-          vista: 'anual', ref: new Date(), periodoId: null, finde: false, leySoloUsadas: true };
+          vista: 'anual', ref: new Date(), periodoId: null, finde: false, leySoloUsadas: true, fmtSem: 'oficial' };
+try { if (localStorage.getItem('fmtSem') === 'tabla') S.fmtSem = 'tabla'; } catch (x) {}
 var tipoPor = {}, porDia = {};
 
 // Un solo canal con el servidor: dentro de Google usa google.script.run; alojada fuera, hace un POST a la URL /exec (sin cookies).
@@ -729,6 +750,38 @@ function bloqueItems(items) {
       (it.comp ? '<span class="comp-b">Complementaria</span>' : '') + '</span>';
   }).join('');
 }
+/* ---- Semana · formato oficial ---- */
+var INI_SEMANAS_DEF = '2026-08-10'; // lunes de la semana N° 1 si el administrador no definió otro
+function numSemana(l) {
+  var base = parse(/^\d{4}-\d{2}-\d{2}$/.test(S.cfg.inicioSemanas || '') ? S.cfg.inicioSemanas : INI_SEMANAS_DEF);
+  base = lunes(base);
+  return Math.round((l - base) / 604800000) + 1;
+}
+var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+function diaOf(d, i) { return DIASL[i].toUpperCase() + ' ' + p2(d.getDate()) + ' DE ' + MESES[d.getMonth()].toUpperCase() + ' DEL ' + d.getFullYear(); }
+function vistaSemanaOficial() {
+  var l = lunes(S.ref), n = S.finde ? 7 : 5, fin = addDays(l, n - 1), num = numSemana(l);
+  var rango = l.getMonth() === fin.getMonth()
+    ? 'DEL ' + p2(l.getDate()) + ' AL ' + p2(fin.getDate()) + ' DE ' + MESES[fin.getMonth()].toUpperCase() + ' DEL ' + fin.getFullYear()
+    : 'DEL ' + p2(l.getDate()) + ' DE ' + MESES[l.getMonth()].toUpperCase() + ' AL ' + p2(fin.getDate()) + ' DE ' + MESES[fin.getMonth()].toUpperCase() + ' DEL ' + fin.getFullYear();
+  var h = '<div class="of-tit">' + (num >= 1 ? 'CRONOGRAMA N° ' + (num < 100 ? '0' : '') + p2(num) : 'CRONOGRAMA') + '<br>ACTIVIDADES SEMANA ' + rango + '</div>';
+  for (var i = 0; i < n; i++) {
+    var d = addDays(l, i), f = iso(d), items = itemsSemana(d, d), nota = (S.notas || {})[f], ed = puedeNotas();
+    h += '<div class="of-dia"><h4 data-f="' + f + '">' + diaOf(d, i) + '</h4>';
+    if (nota) h += '<div class="of-nota' + (ed ? ' ed' : '') + '"' + (ed ? ' data-nota="' + f + '" title="Editar la nota del día"' : '') + '>' + esc(nota) + '</div>';
+    else if (ed) h += '<div><button type="button" class="nota-add noprint" data-nota="' + f + '" data-html2canvas-ignore="true">✎ Nota del día</button></div>';
+    h += '<table class="of-tab"><thead><tr><th>ACTIVIDAD</th><th class="r">RESPONSABLES</th></tr></thead><tbody>';
+    if (!items.length) h += '<tr class="of-vacio"><td class="a" data-f="' + f + '">Sin actividades</td><td class="r"></td></tr>';
+    items.forEach(function (it) {
+      var a = it.a, t = tipoPor[a.tipoId] || { sinClases: false }, tit = esc(a.titulo);
+      h += '<tr data-id="' + esc(a.id) + '"><td class="a">' + (t.sinClases ? '<span class="fer">' + tit + '</span>' : tit) +
+        (a.descripcion ? '<span class="det">' + esc(a.descripcion) + '</span>' : '') + '</td><td class="r">' + esc(a.responsable) + '</td></tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+  if (puedeEditar()) h += '<p class="nota" data-html2canvas-ignore="true">Las actividades que no son «Complementarias» vienen del cronograma anual/mensual y se editan allí. Para añadir una solo a esta semana usa el botón superior.</p>';
+  return h;
+}
 // Nota destacada de un día (resaltada). Con permiso se puede editar; sin permiso solo se ve.
 function notaDiaHtml(f) {
   var t = (S.notas || {})[f], ed = puedeNotas();
@@ -736,6 +789,7 @@ function notaDiaHtml(f) {
   return ed ? '<button type="button" class="nota-add noprint" data-nota="' + f + '" data-html2canvas-ignore="true">✎ Nota del día</button>' : '';
 }
 function vistaSemana() {
+  if (S.fmtSem === 'oficial') return vistaSemanaOficial();
   var l = lunes(S.ref), n = S.finde ? 7 : 5, fin = addDays(l, n - 1);
   var h = '<div class="resumen"><b>Cronograma semanal · semana del ' + fd(l) + ' al ' + fd(fin) + '</b> · ' + diasLab(l, addDays(l, 4)) + ' días laborables</div>';
   // Primero: actividades (del anual/mensual + complementarias) y, a la derecha, responsables.
@@ -825,6 +879,7 @@ function controles() {
   $('#cTrim').hidden = v !== 'trimestre';
   $('#cPer').hidden = v !== 'periodo';
   $('#cFinde').hidden = v === 'dia';
+  $('#cFmtSem').hidden = v !== 'semana'; $('#selFmtSem').value = S.fmtSem;
   $('#cAnioSel').hidden = S.anios.length < 2;
   $('#selAnio').innerHTML = S.anios.map(function (a) {
     return '<option value="' + esc(a.id) + '"' + (a.id === S.anioId ? ' selected' : '') + '>' + esc(a.nombre) + '</option>';
@@ -868,6 +923,7 @@ $('#selAnio').onchange = function () {
   render();
 };
 $('#pDesde').onchange = $('#pHasta').onchange = render;
+$('#selFmtSem').onchange = function () { S.fmtSem = this.value; try { localStorage.setItem('fmtSem', S.fmtSem); } catch (x) {} render(); };
 $('#chkFinde').onchange = function () { S.finde = this.checked; render(); };
 $('#chkLey').onchange = function () { S.leySoloUsadas = this.checked; render(); };
 $('#selHoja').onchange = ponerHoja;
@@ -1024,7 +1080,7 @@ $('#bConfig').onclick = function () {
   $$('#mCfg [data-sec]').forEach(function (el) { el.hidden = !seccionVisible(el.dataset.sec); });
   $('#cInst').value = c.institucion; $('#cSub').value = c.subtitulo; $('#cReg').value = c.regimen;
   $('#cColor').value = /^#[0-9a-f]{6}$/i.test(c.color) ? c.color : '#0F5AA6';
-  $('#cPie').value = c.pie;
+  $('#cPie').value = c.pie; $('#cIniSem').value = c.inicioSemanas || '';
   $('#cLema').value = c.lema || ''; $('#cAmie').value = c.amie || ''; $('#cTel').value = c.telefono || '';
   $('#cDir').value = c.direccion || ''; $('#cCorreo').value = c.correo || '';
   $('#cAreas').value = c.areas || 'Rectorado\nVicerrectorado'; llenarAreas();
@@ -1137,7 +1193,7 @@ $('#cGuardar').onclick = async function () {
   }
   if (admin) {
     paquete.config = { institucion: $('#cInst').value, subtitulo: $('#cSub').value, regimen: $('#cReg').value,
-                color: $('#cColor').value, pie: $('#cPie').value, areas: $('#cAreas').value,
+                color: $('#cColor').value, pie: $('#cPie').value, inicioSemanas: $('#cIniSem').value, areas: $('#cAreas').value,
                 logoIzq: logos.I, logoDer: logos.D, lema: $('#cLema').value, amie: $('#cAmie').value, telefono: $('#cTel').value,
                 direccion: $('#cDir').value, correo: $('#cCorreo').value, carpeta: $('#cCarpeta').value, carpetaConsulta: $('#cConsulta').value,
                 permisos: $$('#listaPerm input').filter(function (x) { return x.checked; }).map(function (x) { return x.value; }) };
@@ -1273,7 +1329,7 @@ async function generarPDF() {
   var nodo = $('#doc'), escala = 1.5;
   var canvas = await window.html2canvas(nodo, { scale: escala, backgroundColor: '#ffffff', useCORS: true });
   var base = nodo.getBoundingClientRect().top, fines = [];
-  nodo.querySelectorAll('.enc,.resumen,.mes,.crono thead,.crono tbody tr,.mtab thead,.mtab tbody tr,.lt tr,.sem-top,.sem-act thead,.sem-act tbody tr,.leyenda,.dia-g').forEach(function (el) {
+  nodo.querySelectorAll('.enc,.resumen,.mes,.crono thead,.crono tbody tr,.mtab thead,.mtab tbody tr,.lt tr,.sem-top,.sem-act thead,.sem-act tbody tr,.of-tab tbody tr,.of-dia,.leyenda,.dia-g').forEach(function (el) {
     fines.push(Math.round((el.getBoundingClientRect().bottom - base) * escala));
   });
   fines.sort(function (a, b) { return a - b; });
@@ -1281,15 +1337,24 @@ async function generarPDF() {
   var W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight(), mg = 8;
   var anchoMm = W - 2 * mg, pxPorMm = canvas.width / anchoMm, altoPag = Math.floor((H - 2 * mg) * pxPorMm);
   var y = 0, primera = true;
+  // En el formato oficial el encabezado con logo se repite en cada página
+  var repetir = S.vista === 'semana' && S.fmtSem === 'oficial', encH = 0, encCv = null;
+  if (repetir) {
+    var e = nodo.querySelector('.enc');
+    if (e) { encH = Math.round((e.getBoundingClientRect().bottom - base) * escala) + 6; encCv = document.createElement('canvas'); encCv.width = canvas.width; encCv.height = encH; encCv.getContext('2d').drawImage(canvas, 0, 0, canvas.width, encH, 0, 0, canvas.width, encH); }
+  }
   while (y < canvas.height) {
-    var limite = y + altoPag, corte;
+    var cab = (!primera && encCv) ? encH : 0, disp = altoPag - cab;
+    var limite = y + disp, corte;
     if (limite >= canvas.height) corte = canvas.height;
     else corte = fines.filter(function (f) { return f > y + 40 && f <= limite; }).pop() || limite;
-    var c = document.createElement('canvas'); c.width = canvas.width; c.height = corte - y;
-    c.getContext('2d').drawImage(canvas, 0, y, canvas.width, corte - y, 0, 0, canvas.width, corte - y);
+    var c = document.createElement('canvas'); c.width = canvas.width; c.height = cab + corte - y;
+    var cx = c.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height);
+    if (cab) cx.drawImage(encCv, 0, 0);
+    cx.drawImage(canvas, 0, y, canvas.width, corte - y, 0, cab, canvas.width, corte - y);
     if (!primera) pdf.addPage();
     primera = false;
-    pdf.addImage(c.toDataURL('image/jpeg', 0.88), 'JPEG', mg, mg, anchoMm, (corte - y) / pxPorMm);
+    pdf.addImage(c.toDataURL('image/jpeg', 0.88), 'JPEG', mg, mg, anchoMm, c.height / pxPorMm);
     y = corte;
   }
   return pdf.output('datauristring').split(',')[1];
