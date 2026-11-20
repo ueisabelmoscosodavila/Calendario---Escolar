@@ -18,7 +18,7 @@ input,select,textarea{border:1px solid var(--borde);border-radius:6px;padding:6p
 label{display:block;font-size:12px;font-weight:bold;margin:8px 0 3px;color:#555}
 .rol-invitado .admin,.rol-lector .admin,.rol-lector .edita{display:none!important}
 .rol-invitado #bClave{display:none!important}
-body:not(.perm-excel) #bExcel,body:not(.perm-excel) #bWord{display:none!important}
+body:not(.perm-excel) #bExcel,body:not(.rol-admin) #bWord{display:none!important}
 .fila-us{display:grid;grid-template-columns:1fr 110px 1fr 1fr 34px;gap:6px;align-items:center;margin-bottom:5px}
 .anio-blk{border:1px solid var(--borde);border-radius:8px;padding:8px;margin-bottom:10px;background:#f7fafd}
 .anio-cab{display:grid;grid-template-columns:1fr 140px 140px 34px;gap:6px;margin-bottom:6px}
@@ -168,6 +168,11 @@ tr.comp td{background:#fffaf0}
 .leyenda{margin-top:12px;border-top:1px solid var(--borde);padding-top:6px;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:8pt;align-items:center}
 .leyenda span i{display:inline-block;width:14px;height:14px;vertical-align:middle;margin-right:4px;border-radius:2px}
 .pie{font-size:11px;color:#555;margin-top:6px}
+.ley-sem .leyenda{font-size:6pt;gap:2px 10px}
+.ley-sem .leyenda span i{width:8px;height:8px;margin-right:3px}
+.perm-us{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:2px 14px;font-size:12px;padding:2px 0 8px;border-bottom:1px dashed var(--borde);margin-bottom:4px}
+.perm-us label{display:inline-flex;align-items:center;font-weight:normal;margin:0;color:#222}
+.perm-us input{width:auto;margin-right:4px}
 
 /* modales */
 .modal{position:fixed;inset:0;background:#0006;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:30px 10px;z-index:10}
@@ -361,14 +366,7 @@ button.ocupado{opacity:.6;cursor:wait}
     <div id="listaUs"></div>
     <datalist id="dlAreas"></datalist>
     <button type="button" id="addUs">＋ Añadir usuario</button>
-    <h4>Permisos extra de los invitados</h4>
-    <div class="ayuda">Siempre pueden ver, agregar actividades de su área, editar o eliminar las que ellos registraron e imprimir en PDF. Marca lo que quieras permitirles además:</div>
-    <div class="perm-lista" id="listaPerm">
-      <label><input type="checkbox" value="excel">Exportar a Excel y Word</label>
-      <label><input type="checkbox" value="leyendas">Cambiar la leyenda (tipos y colores)</label>
-      <label><input type="checkbox" value="fechas">Cambiar las fechas de trimestres / períodos</label>
-      <label><input type="checkbox" value="notasdia">Escribir la nota destacada de cada día (vista semanal)</label>
-    </div>
+    <div class="ayuda">Debajo de cada invitado marca lo que se le permite. Siempre puede ver e imprimir en PDF. Word solo lo genera el administrador. Si no marcas «agregar actividades», el invitado solo consulta.</div>
     </div>
 
     <div data-sec="leyenda">
@@ -574,10 +572,12 @@ function tienePerm(p) { return (S.permisos || []).indexOf(p) >= 0; }
 function puedeEditar() { return S.usuario.rol === 'admin' || S.usuario.rol === 'invitado'; }
 // Nota destacada del día: administrador o quien tenga el permiso «notasdia»
 function puedeNotas() { return S.usuario.rol === 'admin' || tienePerm('notasdia'); }
-function puedeModificar(a) {
+function puedeModificar(a, comp) {
   if (S.usuario.rol === 'admin') return true;
-  return S.usuario.rol === 'invitado' && !!a.propia;
+  return S.usuario.rol === 'invitado' && !!a.propia && tienePerm(comp ? 'actsemanales' : 'actanuales');
 }
+// Crear: administrador, o invitado con el permiso correspondiente (semanales = complementarias; el resto = anuales/mensuales)
+function puedeCrear(comp) { return S.usuario.rol === 'admin' || (S.usuario.rol === 'invitado' && tienePerm(comp ? 'actsemanales' : 'actanuales')); }
 // Quién puede guardar copias de lo que imprime en la carpeta de consulta
 function puedeGuardarCopia() { return S.usuario.rol === 'admin' || S.usuario.rol === 'invitado'; }
 // El semanal (y el día) muestran lo del anual/mensual en solo lectura; ahí solo se editan las complementarias.
@@ -803,7 +803,7 @@ function vistaSemanaOficial() {
     });
     h += '</tbody></table></div>';
   }
-  if (puedeEditar()) h += '<p class="nota noprint" data-html2canvas-ignore="true">Las actividades que no son «Complementarias» vienen del cronograma anual/mensual y se editan allí. Para añadir una solo a esta semana usa el botón superior.</p>';
+  if (puedeCrear(true)) h += '<p class="nota noprint" data-html2canvas-ignore="true">Las actividades que no son «Complementarias» vienen del cronograma anual/mensual y se editan allí. Para añadir una solo a esta semana usa el botón superior.</p>';
   return h;
 }
 // Nota destacada de un día (resaltada). Con permiso se puede editar; sin permiso solo se ve.
@@ -843,7 +843,7 @@ function vistaSemana() {
     h += '<td data-f="' + iso(dia) + '">' + obs + '</td>';
   }
   h += '</tr></tbody></table>';
-  if (puedeEditar()) h += '<p class="nota noprint" data-html2canvas-ignore="true">Las actividades sin la etiqueta «Complementaria» vienen del cronograma anual/mensual y se editan allí. Aquí puedes añadir actividades complementarias solo para esta semana (botón superior o clic en un día).' + (puedeNotas() ? ' La «Nota del día» resaltada se escribe en la fila Observaciones de cada día.' : '') + '</p>';
+  if (puedeCrear(true)) h += '<p class="nota noprint" data-html2canvas-ignore="true">Las actividades sin la etiqueta «Complementaria» vienen del cronograma anual/mensual y se editan allí. Aquí puedes añadir actividades complementarias solo para esta semana (botón superior o clic en un día).' + (puedeNotas() ? ' La «Nota del día» resaltada se escribe en la fila Observaciones de cada día.' : '') + '</p>';
   return h;
 }
 function vistaDia() {
@@ -893,6 +893,7 @@ function render() {
   else if (v === 'semana') h = vistaSemana();
   else h = vistaDia();
   $('#vista').innerHTML = h;
+  $('#leyenda').className = v === 'semana' ? 'ley-sem' : '';
   $('#leyenda').innerHTML = leyenda() + (v === 'semana' ? pieSemana() : '');
   controles();
 }
@@ -910,6 +911,7 @@ function controles() {
   }).join('');
   $('#chkFinde').checked = S.finde; $('#chkLey').checked = S.leySoloUsadas;
   $('#bNueva').textContent = enSemanal() ? '＋ Actividad complementaria' : '＋ Actividad';
+  $('#bNueva').hidden = !puedeCrear(enSemanal());
   var r = S.ref;
   $('#etqNav').textContent = v === 'mes' ? MESES[r.getMonth()] + ' ' + r.getFullYear()
     : v === 'semana' ? fd(lunes(r)) + ' – ' + fd(addDays(lunes(r), 6)) : v === 'dia' ? fdl(r) : '';
@@ -970,7 +972,7 @@ $('#doc').addEventListener('click', function (e) {
   }
   var c = e.target.closest('[data-f]');
   if (c) {
-    if (puedeEditar()) abrirActividad(null, c.dataset.f, enSemanal());
+    if (puedeCrear(enSemanal())) abrirActividad(null, c.dataset.f, enSemanal());
     else { S.ref = parse(c.dataset.f); S.vista = 'dia'; render(); }
   }
 });
@@ -984,13 +986,13 @@ $$('[data-cerrar]').forEach(function (b) { b.onclick = function () { cerrar(b.da
 var actEdit = null, modoComp = false;
 function abrirActividad(a, fecha, comp) {
   actEdit = a; modoComp = !!comp;
-  var editable = (a ? puedeModificar(a) : puedeEditar()) && (modoComp || !enSemanal());
+  var editable = (a ? puedeModificar(a, modoComp) : puedeCrear(modoComp)) && (modoComp || !enSemanal());
   $('#mActT').textContent = modoComp ? (a ? 'Actividad complementaria' : 'Nueva actividad complementaria')
     : (a ? (editable ? 'Editar actividad' : 'Actividad') : 'Nueva actividad');
   var av = $('#aAviso');
   if (modoComp) { av.textContent = 'Complementaria: aparece solo en el cronograma semanal de esa semana.'; av.hidden = false; }
   else if (!editable && puedeEditar() && enSemanal()) { av.textContent = 'Esta actividad viene del cronograma anual/mensual. Para editarla ve a la vista Mes o Anual.'; av.hidden = false; }
-  else if (!editable && puedeEditar()) { av.textContent = 'Solo puedes modificar o eliminar las actividades que tú registraste.'; av.hidden = false; }
+  else if (!editable && puedeEditar()) { av.textContent = puedeCrear(modoComp) ? 'Solo puedes modificar o eliminar las actividades que tú registraste.' : 'No tienes permiso para agregar ni modificar este tipo de actividades. Pídelo al administrador.'; av.hidden = false; }
   else av.hidden = true;
   $('#aTipo').innerHTML = S.tipos.map(function (t) { return '<option value="' + esc(t.id) + '">' + esc(t.nombre) + '</option>'; }).join('');
   var areas = areasLista();
@@ -1117,8 +1119,6 @@ $('#bConfig').onclick = function () {
   $('#cConsulta').value = c.carpetaConsultaId ? 'https://drive.google.com/drive/folders/' + c.carpetaConsultaId : '';
   $('#cConsultaNom').textContent = S.consultaNombre ? 'Carpeta actual: ' + S.consultaNombre : 'Sin carpeta definida (se usa la carpeta 1).';
   var lu = $('#listaUs'); lu.innerHTML = ''; (S.usuarios || []).forEach(function (u) { lu.appendChild(filaUs(u)); });
-  var perm = String(c.permisos || '').split(',');
-  $$('#listaPerm input').forEach(function (x) { x.checked = perm.indexOf(x.value) >= 0; });
   $('#cMsg').textContent = '';
   abrir('mCfg');
 };
@@ -1141,15 +1141,19 @@ function bloqueAnio(a, pers) {
   return b;
 }
 $('#addAnio').onclick = function () { $('#listaAnios').appendChild(bloqueAnio({}, [])); };
+var PERM_ETQ = [['actanuales', 'Agregar actividades anuales / mensuales'], ['actsemanales', 'Agregar actividades semanales'], ['notasdia', 'Nota del día'], ['excel', 'Exportar a Excel'], ['leyendas', 'Cambiar la leyenda'], ['fechas', 'Cambiar fechas de trimestres']];
 function filaUs(u) {
   var d = document.createElement('div'); d.className = 'fila-us'; d.dataset.existe = u.usuario ? '1' : '';
   d.innerHTML = '<input placeholder="usuario" value="' + esc(u.usuario || '') + '"' + (u.usuario ? ' readonly' : '') + ' autocomplete="off">' +
     '<select><option value="invitado"' + (u.rol === 'lector' ? '' : ' selected') + '>Invitado</option><option value="lector"' + (u.rol === 'lector' ? ' selected' : '') + '>Consulta</option></select>' +
     '<input list="dlAreas" placeholder="Área (Rectorado…)" value="' + esc(u.area || '') + '" autocomplete="off">' +
     '<input type="password" placeholder="' + (u.usuario ? 'Nueva clave (opcional)' : 'Clave (mín. 8)') + '" autocomplete="new-password">' +
-    '<button type="button" class="pel" title="Quitar">✕</button>';
-  var sel = d.querySelector('select'), area = d.querySelectorAll('input')[1];
-  var ajustar = function () { area.disabled = sel.value === 'lector'; if (area.disabled) area.value = ''; };
+    '<button type="button" class="pel" title="Quitar">✕</button>' +
+    '<div class="perm-us">' + PERM_ETQ.map(function (p) {
+      return '<label><input type="checkbox" value="' + p[0] + '"' + ((u.permisos || []).indexOf(p[0]) >= 0 ? ' checked' : '') + '>' + p[1] + '</label>';
+    }).join('') + '</div>';
+  var sel = d.querySelector('select'), area = d.querySelectorAll('input')[1], pu = d.querySelector('.perm-us');
+  var ajustar = function () { area.disabled = sel.value === 'lector'; if (area.disabled) area.value = ''; pu.hidden = sel.value === 'lector'; };
   sel.onchange = ajustar; ajustar();
   d.querySelector('button').onclick = function () { d.remove(); };
   return d;
@@ -1219,11 +1223,11 @@ $('#cGuardar').onclick = async function () {
     paquete.config = { institucion: $('#cInst').value, subtitulo: $('#cSub').value, regimen: $('#cReg').value,
                 color: $('#cColor').value, pie: $('#cPie').value, inicioSemanas: $('#cIniSem').value, areas: $('#cAreas').value,
                 logoIzq: logos.I, logoDer: logos.D, lema: $('#cLema').value, amie: $('#cAmie').value, telefono: $('#cTel').value,
-                direccion: $('#cDir').value, correo: $('#cCorreo').value, carpeta: $('#cCarpeta').value, carpetaConsulta: $('#cConsulta').value,
-                permisos: $$('#listaPerm input').filter(function (x) { return x.checked; }).map(function (x) { return x.value; }) };
+                direccion: $('#cDir').value, correo: $('#cCorreo').value, carpeta: $('#cCarpeta').value, carpetaConsulta: $('#cConsulta').value };
     paquete.usuarios = $$('#listaUs .fila-us').map(function (f) {
       var i = f.querySelectorAll('input'), rol = f.querySelector('select').value;
-      return { usuario: i[0].value, rol: rol, area: i[1].value, clave: i[2].value };
+      return { usuario: i[0].value, rol: rol, area: i[1].value, clave: i[2].value,
+               permisos: rol === 'lector' ? [] : Array.prototype.filter.call(f.querySelectorAll('.perm-us input'), function (x) { return x.checked; }).map(function (x) { return x.value; }) };
     });
   }
   try {
