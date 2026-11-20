@@ -435,7 +435,7 @@ button.ocupado{opacity:.6;cursor:wait}
 <script>
 /* Si esta página se aloja FUERA de Google (hosting propio o GitHub Pages), pega aquí la URL de la aplicación web (termina en /exec).
    Si se abre desde la URL de Apps Script no hace falta tocar esto. */
-var API_URL = 'https://script.google.com/macros/s/AKfycbzLFUmWqJysPNlD4g2WHw6vUy9Z6Hc_GyjpkkDcYopBhXAsQa1WYA2kfjjJUNM6nghS/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbzBRBrlIG9FwQcXTsRa84-7-zu3mIiRBaQ0f6M6cy1yAyDEIn51AUKEtv8Ce1rAllgQ/exec';
 
 /* ============ Utilidades ============ */
 var $ = function (s) { return document.querySelector(s); };
@@ -1318,10 +1318,18 @@ function etiquetaVista() {
   return v === 'semana' ? 'Semana' : 'Dia';
 }
 function nombreArchivo() {
-  var r = rangoActual(), h = new Date();
-  var pre = { anual: 'Cronograma anual', trimestre: 'Cronograma trimestral ' + etiquetaVista(), periodo: 'Cronograma periodo',
-              mes: 'Cronograma mensual ' + etiquetaVista(), semana: 'Cronograma semanal', dia: 'Cronograma diario' }[S.vista];
-  return pre + ' ' + iso(r[0]) + (iso(r[0]) !== iso(r[1]) ? ' a ' + iso(r[1]) : '') + ' ' + pad(h.getHours()) + pad(h.getMinutes());
+  // Nombre del cronograma: «Cronograma Primer trimestre - Año lectivo 2026 - 2027», «Cronograma semanal Semana 16 del 23 al 27 de noviembre 2026 - Año lectivo 2026 - 2027»…
+  var r = rangoActual(), v = S.vista, base;
+  if (v === 'anual') base = 'Cronograma anual';
+  else if (v === 'trimestre') base = 'Cronograma ' + etiquetaVista();
+  else if (v === 'periodo') base = 'Cronograma periodo ' + iso(r[0]) + ' a ' + iso(r[1]);
+  else if (v === 'mes') base = 'Cronograma mensual ' + etiquetaVista();
+  else if (v === 'semana') {
+    var l = lunes(S.ref), f = addDays(l, S.finde ? 6 : 4), num = numSemana(l);
+    base = 'Cronograma semanal ' + (num >= 1 ? 'Semana ' + num + ' ' : '') + 'del ' + l.getDate() + (l.getMonth() === f.getMonth() ? '' : ' de ' + MESES[l.getMonth()].toLowerCase()) +
+      ' al ' + f.getDate() + ' de ' + MESES[f.getMonth()].toLowerCase() + ' ' + f.getFullYear();
+  } else base = 'Cronograma diario ' + iso(r[0]);
+  return (base + ' - Año lectivo ' + anioNombre()).replace(/[\\/:*?"<>|]/g, '-');
 }
 function descargar(blob, nombre) {
   var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre;
@@ -1395,6 +1403,8 @@ $('#bPrint').onclick = async function () {
     try { await guardarCopiaDrive(nombreArchivo() + '.pdf', 'application/pdf', await generarPDF()); }
     catch (e) { toast('No se pudo guardar la copia en Drive: ' + (e && e.message ? e.message : e), true); }
   }
+  var tituloAnt = document.title; document.title = nombreArchivo();
+  window.onafterprint = function () { document.title = tituloAnt; };
   window.print();
 };
 $('#bExcel').onclick = async function () {
